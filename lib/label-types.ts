@@ -39,6 +39,8 @@ export interface LabelFieldComparison {
     labelValue: string | null;
     applicationValue: string;
     status: ComparisonStatus;
+    required: boolean;
+    requirementReason: string;
 }
 
 export interface LabelMatchSummary {

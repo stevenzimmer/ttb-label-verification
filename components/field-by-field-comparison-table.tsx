@@ -24,7 +24,10 @@ export const FieldByFieldComparisonTable = ({
         getLabelMatchSummary,
     } = useLabelContext();
     const applicationData = applicationDataByFile[activeFileIndex] ?? null;
-    const summary = getLabelMatchSummary(parsedDataByFile[activeFileIndex] ?? null);
+    const summary = getLabelMatchSummary(
+        parsedDataByFile[activeFileIndex] ?? null,
+        applicationData,
+    );
     const reviewFields = new Set(summary?.reviewFields ?? []);
     const issueFields = new Set(summary?.issueFields ?? []);
     return (
@@ -56,6 +59,7 @@ export const FieldByFieldComparisonTable = ({
                             applicationData?.[key as keyof ApplicationData] ?? "";
                         const isApplicationEmpty = applicationValue.trim() === "";
                         const isGovWarning = key === "gov_warning";
+                        const requirementLabel = comparison.required ? "Required" : "Optional";
                         return (
                             <TableRow key={key}>
                                 <TableCell className="font-medium whitespace-normal wrap-break-word">
@@ -64,6 +68,12 @@ export const FieldByFieldComparisonTable = ({
                                         title={iconLabel}
                                     >
                                         <span>{formatFieldName(key)}</span>
+                                        <span
+                                            className="rounded border border-slate-200 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-slate-600"
+                                            title={comparison.requirementReason}
+                                        >
+                                            {requirementLabel}
+                                        </span>
                                         {Icon && (
                                             <Icon className="h-4 w-4 shrink-0" />
                                         )}
@@ -112,7 +122,7 @@ export const FieldByFieldComparisonTable = ({
                                     ? comparison.status === "match"
                                         ? "✅ Match"
                                         : "❌ Issue"
-                                    : !isApplicationEmpty &&
+                                    : (comparison.required || !isApplicationEmpty) &&
                                       (comparison.status === "match"
                                           ? "✅ Match"
                                           : comparison.status === "review"

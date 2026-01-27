@@ -39,7 +39,7 @@ export const LabelCards = () => {
                         </div>
                     </div>
                 )}
-                {uploadedFiles.length > 1 && (
+                {uploadedFiles.length > 0 && (
                     <Button
                         onClick={handleValidateAllLabels}
                         disabled={isLoading}

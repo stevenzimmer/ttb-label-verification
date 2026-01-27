@@ -13,6 +13,10 @@ import type {
     SavedLabelRecord,
 } from "@/lib/label-types";
 import {createEmptyApplicationData} from "@/lib/format-label";
+import {
+    buildRequirementContext,
+    getFieldRequirements,
+} from "@/lib/label-requirements";
 
 export interface ProcessingTime {
     duration: number;
@@ -93,6 +97,7 @@ export interface LabelContextValue {
     } | null;
     getLabelMatchSummary: (
         data: LabelExtraction | null,
+        applicationData: ApplicationData | null,
     ) => LabelMatchSummary | null;
 }
 
@@ -139,17 +144,23 @@ export function LabelProvider({
     const [lastBatchCount, setLastBatchCount] = useState(0);
 
     const getLabelMatchSummary = (
-            data: LabelExtraction | null,
-        ): LabelMatchSummary | null => {
-            if (!data) {
-                return null;
-            }
-            const entries = Object.entries(data);
+        data: LabelExtraction | null,
+        applicationData: ApplicationData | null,
+    ): LabelMatchSummary | null => {
+        if (!data) {
+            return null;
+        }
+
+        const entries = Object.entries(data) as Array<
+            [keyof ApplicationData, LabelExtraction[keyof LabelExtraction]]
+        >;
+
+        if (!applicationData) {
             const total = entries.length;
             const matchedFields: string[] = [];
             const reviewFields: string[] = [];
             const issueFields: string[] = [];
-    
+
             entries.forEach(([key, field]) => {
                 if (field.confidence > 0.7) {
                     matchedFields.push(key);
@@ -159,17 +170,51 @@ export function LabelProvider({
                     issueFields.push(key);
                 }
             });
-    
+
             const matched = matchedFields.length;
-            const allMatched = matched === total;
             return {
                 matched,
                 total,
-                allMatched,
+                allMatched: matched === total,
                 reviewFields,
                 issueFields,
             };
+        }
+
+        const context = buildRequirementContext(applicationData, data);
+        const requirements = getFieldRequirements(context);
+        const requiredKeys = entries
+            .map(([key]) => key)
+            .filter((key) => requirements[key].required);
+
+        const matchedFields: string[] = [];
+        const reviewFields: string[] = [];
+        const issueFields: string[] = [];
+
+        requiredKeys.forEach((key) => {
+            const field = data[key];
+            const value = typeof field.value === "string" ? field.value.trim() : "";
+            const hasValue = value.length > 0;
+
+            if (hasValue && field.confidence > 0.7) {
+                matchedFields.push(key);
+            } else if (hasValue && field.confidence > 0.4) {
+                reviewFields.push(key);
+            } else {
+                issueFields.push(key);
+            }
+        });
+
+        const total = requiredKeys.length;
+        const matched = matchedFields.length;
+        return {
+            matched,
+            total,
+            allMatched: matched === total,
+            reviewFields,
+            issueFields,
         };
+    };
 
     const compareLabelToApplication = (
         labelData: LabelExtraction | null,
@@ -186,7 +231,13 @@ export function LabelProvider({
                 .replace(/\s+/g, " ")
                 .trim();
         const comparisons: Record<string, LabelFieldComparison> = {};
-        Object.entries(labelData).forEach(([key, field]) => {
+        const context = buildRequirementContext(applicationData, labelData);
+        const requirements = getFieldRequirements(context);
+
+        (Object.entries(labelData) as Array<
+            [keyof ApplicationData, LabelExtraction[keyof LabelExtraction]]
+        >).forEach(([key, field]) => {
+            const requirement = requirements[key];
             const labelValue =
                 typeof field.value === "string" ? field.value.trim() : "";
             const applicationValue =
@@ -205,6 +256,8 @@ export function LabelProvider({
                     "GOVERNMENT WARNING:",
                 );
                 status = hasAllCapsWarning ? "match" : "issue";
+            } else if (requirement.required && (!hasLabel || !hasApplication)) {
+                status = "issue";
             } else if (!hasLabel || !hasApplication) {
                 status = "review";
             } else if (labelValue === applicationValue) {
@@ -219,6 +272,8 @@ export function LabelProvider({
                 labelValue: field.value,
                 applicationValue,
                 status,
+                required: requirement.required,
+                requirementReason: requirement.reason,
             };
         });
         return comparisons;
@@ -231,14 +286,15 @@ export function LabelProvider({
             return null;
         }
         const entries = Object.entries(comparisons);
-        const total = entries.length;
-        const matched = entries.filter(
+        const requiredEntries = entries.filter(([, comparison]) => comparison.required);
+        const total = requiredEntries.length;
+        const matched = requiredEntries.filter(
             ([, comparison]) => comparison.status === "match",
         ).length;
-        const reviewFields = entries
+        const reviewFields = requiredEntries
             .filter(([, comparison]) => comparison.status === "review")
             .map(([key]) => key);
-        const issueFields = entries
+        const issueFields = requiredEntries
             .filter(([, comparison]) => comparison.status === "issue")
             .map(([key]) => key);
         return {

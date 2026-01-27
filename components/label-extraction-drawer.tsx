@@ -47,9 +47,9 @@ export function LabelExtractionDrawer() {
 
     const canAccept = Boolean(
         comparisons &&
-            Object.values(comparisons).every(
-                (comparison) => comparison.status === "match",
-            ),
+            Object.values(comparisons)
+                .filter((comparison) => comparison.required)
+                .every((comparison) => comparison.status === "match"),
     );
 
     const filteredTimes = processingTimes.filter(
@@ -58,8 +58,6 @@ export function LabelExtractionDrawer() {
 
     const onlyShowRecentTime = filteredTimes.length - 1;
     const recentTime = filteredTimes[onlyShowRecentTime];
-
-    console.log({comparisons});
     return (
         <Drawer
             open={Boolean(isPreviewDrawerOpen && selectedFile)}
@@ -169,19 +167,25 @@ export function LabelExtractionDrawer() {
                                                     </Button>
                                                 </div>
                                             ) : (
-                                                <Button
-                                                    type="button"
-                                                    variant="outline"
-                                                    disabled={isLoading}
-                                                    className="border-red-200 text-red-700 hover:bg-red-50"
-                                                    onClick={() =>
-                                                        void handleRejectLabelAtIndex(
-                                                            activeFileIndex,
-                                                        )
-                                                    }
-                                                >
-                                                    Reject label
-                                                </Button>
+                                                <>
+                                                    {!acceptedByFile[
+                                                        activeFileIndex
+                                                    ] && (
+                                                        <Button
+                                                            type="button"
+                                                            variant="outline"
+                                                            disabled={isLoading}
+                                                            className="border-red-200 text-red-700 hover:bg-red-50"
+                                                            onClick={() =>
+                                                                void handleRejectLabelAtIndex(
+                                                                    activeFileIndex,
+                                                                )
+                                                            }
+                                                        >
+                                                            Reject label
+                                                        </Button>
+                                                    )}
+                                                </>
                                             )}
                                             <div className="">
                                                 {acceptedByFile[

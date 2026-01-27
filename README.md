@@ -60,3 +60,38 @@ Short “Assumptions” Bullet (even more concise)
 
 -   Assumption: outbound HTTPS to the OpenAI API is permitted for this prototype.
 -   Future state: deploy Azure OpenAI behind Private Link with public access disabled, accessed only from within the VNet.
+
+## Requirements Coverage
+
+### Features that satisfy the stated requirements
+
+-   Batch uploads + batch processing
+    -   Multiple file upload via `components/image-upload.tsx`
+    -   “Extract text from all labels” with controlled concurrency and batch timing via `components/label-context.tsx:560` and surfaced in `components/label-cards.tsx`
+-   Speed awareness for the ~5 second target
+    -   Per-label processing times displayed in `components/label-extraction-drawer.tsx`
+    -   Batch total + average time per label with red/green threshold feedback in `components/label-cards.tsx`
+-   Clean, obvious UI for mixed tech comfort levels
+    -   Straightforward upload surface and drawer-based details in `components/label-validator-wrapper.tsx`, `components/image-upload.tsx`, and `components/label-extraction-drawer.tsx`
+-   Core field extraction aligned to common TTB elements
+    -   Extraction schema includes brand, class/type, alcohol content, net contents, producer name/address, country of origin, and government warning in `lib/label-extraction-schema.ts`
+    -   System prompt enforces “visible text only,” exact excerpts as evidence, and nulls for missing fields in `lib/system-prompt.ts`
+    -   API route uses structured parsing with Zod in `app/api/validate-label/route.ts`
+-   Field-by-field comparison workflow
+    -   Field comparison table with per-field status in `components/field-by-field-comparison-table.tsx`
+    -   “Judgment” matching for case/punctuation/apostrophe differences in `components/label-context.tsx:232`
+-   Some conditional requirement logic (beyond naive matching)
+    -   Imported beverage requirement for country of origin and conditional ABV requirement logic in `lib/label-requirements.ts`
+
+### Gaps vs. the stated requirements and stakeholder concerns
+
+-   Government warning exactness is under-validated
+    -   Current logic checks only for the `GOVERNMENT WARNING:` prefix rather than the full required statement and formatting nuances in `components/label-context.tsx:254` and `components/field-by-field-comparison-table.tsx`
+-   No persistence, audit trail, or real save path
+    -   Accept/reject actions are simulated with a timeout and stored only in client state in `components/label-context.tsx:607` and `components/label-context.tsx:681`
+-   Speed target is measured but not enforced
+    -   The UI reports timing but there is no SLA/timeout handling or fallback behavior if extraction exceeds the threshold in `components/label-cards.tsx` and `components/label-context.tsx:560`
+-   Limited robustness to poor image quality
+    -   Images are resized before processing, but there is no de-skew, glare reduction, or OCR-specific preprocessing beyond resizing in `components/label-context.tsx:418`
+-   Requirement logic is heuristic and may miss edge cases
+    -   Beverage type inference and requirement decisions are regex-based and approximate the real TTB rules in `lib/label-requirements.ts`

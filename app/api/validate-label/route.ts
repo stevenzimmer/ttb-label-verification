@@ -1,7 +1,10 @@
 import {NextRequest, NextResponse} from "next/server";
 import OpenAI from "openai";
 import {zodTextFormat} from "openai/helpers/zod";
-import {LabelExtractionSchema} from "@/lib/label-extraction-schema";
+import {
+    LabelExtractionSchema,
+    normalizeLabelExtraction,
+} from "@/lib/label-extraction-schema";
 import {systemPrompt} from "@/lib/system-prompt";
 
 const client = new OpenAI({
@@ -24,7 +27,6 @@ export async function POST(request: NextRequest) {
     const mimeType = file.type || "image/jpeg"; // fallback to jpeg if type is not available
     const base64Url = `data:${mimeType};base64,${base64Image}`;
 
-    // console.log({ocrText});
     try {
         const response = await client.responses.parse({
             model: "gpt-4o-mini",
@@ -62,7 +64,11 @@ export async function POST(request: NextRequest) {
                 {status: 500},
             );
         }
-        const parsed = LabelExtractionSchema.parse(JSON.parse(text));
+        const raw = JSON.parse(text) as Record<string, unknown>;
+        const withDefaults = normalizeLabelExtraction(
+            raw as Partial<ReturnType<typeof normalizeLabelExtraction>>,
+        );
+        const parsed = LabelExtractionSchema.parse(withDefaults);
         const normalized = Object.fromEntries(
             Object.entries(parsed).map(([key, field]) => {
                 const value =

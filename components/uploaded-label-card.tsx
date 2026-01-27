@@ -25,10 +25,12 @@ export function UploadedLabelCard({index}: UploadedLabelCardProps) {
         handleSelectLabel,
         getLabelMatchSummary,
         parsedDataByFile,
+        applicationDataByFile,
         setIsPreviewDrawerOpen,
     } = useLabelContext();
     const file = uploadedFiles[index];
-    const summary = getLabelMatchSummary(parsedDataByFile[index] ?? null);
+    const applicationData = applicationDataByFile[index] ?? null;
+    const summary = getLabelMatchSummary(parsedDataByFile[index] ?? null, applicationData);
 
     const validating = validatingByFile[index];
     const accepted = acceptedByFile[index];
