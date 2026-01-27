@@ -9,7 +9,6 @@ const client = new OpenAI({
 });
 
 export async function POST(request: NextRequest) {
-    // const { ocrText } = await request.json();
     const formData = await request.formData();
     const file = formData.get("file") as File;
 
@@ -40,7 +39,7 @@ export async function POST(request: NextRequest) {
                         {
                             type: "input_image",
                             image_url: base64Url,
-                            detail: "high",
+                            detail: "auto",
                         },
                     ],
                 },
@@ -55,7 +54,6 @@ export async function POST(request: NextRequest) {
 
         // 3) Parse the JSON result
         // In the Responses API, the structured output is returned as JSON content.
-        console.log({response});
         const text = response.output_text;
 
         if (!text) {
@@ -64,9 +62,25 @@ export async function POST(request: NextRequest) {
                 {status: 500},
             );
         }
-        const parsed = JSON.parse(text);
+        const parsed = LabelExtractionSchema.parse(JSON.parse(text));
+        const normalized = Object.fromEntries(
+            Object.entries(parsed).map(([key, field]) => {
+                const value =
+                    typeof field.value === "string" && field.value.trim() === ""
+                        ? null
+                        : field.value;
+                const evidence = Array.isArray(field.evidence)
+                    ? field.evidence.filter((item) => item.trim() !== "")
+                    : [];
+                const confidence = Math.min(
+                    1,
+                    Math.max(0, Number(field.confidence) || 0),
+                );
+                return [key, {...field, value, evidence, confidence}];
+            }),
+        );
 
-        return NextResponse.json({parsed}, {status: 200});
+        return NextResponse.json({parsed: normalized}, {status: 200});
     } catch (err) {
         return NextResponse.json(
             {error: (err as Error).message || "Error processing image"},

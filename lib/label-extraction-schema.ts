@@ -19,7 +19,7 @@ export const LabelExtractionSchema = z.object({
     net_contents: textObject,
     producer_name: textObject,
     producer_address: textObject,
-    producer_country_of_origin: textObject,
+    country_of_origin: textObject,
     gov_warning: textObject,
 });
 
