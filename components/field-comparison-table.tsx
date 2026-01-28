@@ -10,8 +10,9 @@ import {formatFieldName} from "@/lib/format-label";
 import type {ApplicationData, LabelFieldComparison} from "@/lib/label-types";
 import {useLabelContext} from "@/components/label-context";
 import {AlertTriangle, XCircle} from "lucide-react";
+import {buildRequirementContext} from "@/lib/label-requirements";
 
-export const FieldByFieldComparisonTable = ({
+export const FieldComparisonTable = ({
     comparisons,
 }: {
     comparisons: Record<string, LabelFieldComparison>;
@@ -19,22 +20,53 @@ export const FieldByFieldComparisonTable = ({
     const {
         activeFileIndex,
         applicationDataByFile,
+        applicationDataImportedByFile,
         handleApplicationDataChange,
         parsedDataByFile,
         getLabelMatchSummary,
+        rejectedByFile
     } = useLabelContext();
     const applicationData = applicationDataByFile[activeFileIndex] ?? null;
+    const isApplicationDataImported =
+        applicationDataImportedByFile[activeFileIndex];
+    const labelData = parsedDataByFile[activeFileIndex] ?? null;
+    const requirementContext = applicationData
+        ? buildRequirementContext( labelData)
+        : null;
+    const beverageTypeLabel = requirementContext
+        ? requirementContext.beverageType === "unknown"
+            ? "Unknown type"
+            : requirementContext.beverageType[0].toUpperCase() +
+              requirementContext.beverageType.slice(1)
+        : null;
+    const originLabel = requirementContext
+        ? requirementContext.isImported
+            ? "Imported"
+            : "Domestic"
+        : null;
     const summary = getLabelMatchSummary(
-        parsedDataByFile[activeFileIndex] ?? null,
+        labelData,
         applicationData,
     );
     const reviewFields = new Set(summary?.reviewFields ?? []);
     const issueFields = new Set(summary?.issueFields ?? []);
     return (
         <div className="mt-6">
-            <h4 className="text-base font-semibold mb-2">
-                Field-by-field comparison
-            </h4>
+            <div className="mb-2 flex flex-wrap items-center gap-2">
+                <h4 className="text-base font-semibold">
+                    Extracted Label text with application comparison
+                </h4>
+                {beverageTypeLabel && originLabel && (
+                    <>
+                        <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-700">
+                            {beverageTypeLabel}
+                        </span>
+                        <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-700">
+                            {originLabel}
+                        </span>
+                    </>
+                )}
+            </div>
             <Table>
                 <TableHeader>
                     <TableRow>
@@ -60,6 +92,8 @@ export const FieldByFieldComparisonTable = ({
                         const isApplicationEmpty = applicationValue.trim() === "";
                         const isGovWarning = key === "gov_warning";
                         const requirementLabel = comparison.required ? "Required" : "Optional";
+                        const isRejected = rejectedByFile[activeFileIndex];
+                        const isInputLocked = isRejected || isApplicationDataImported;
                         return (
                             <TableRow key={key}>
                                 <TableCell className="font-medium whitespace-normal wrap-break-word">
@@ -98,8 +132,8 @@ export const FieldByFieldComparisonTable = ({
                                         }
                                     >
                                         {comparison.status === "match"
-                                            ? "✅ Prefix Present"
-                                            : "❌ Prefix Missing"}
+                                            ? "✅ Present"
+                                            : "❌ Missing"}
                                     </span>
                                 ) : (
                                     <input
@@ -112,8 +146,9 @@ export const FieldByFieldComparisonTable = ({
                                                 event.target.value,
                                             )
                                         }
-                                        className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-slate-400 focus:outline-none"
+                                        className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-slate-400 focus:outline-none disabled:bg-slate-100"
                                         placeholder="Enter application value"
+                                        disabled={isInputLocked}
                                     />
                                 )}
                             </TableCell>

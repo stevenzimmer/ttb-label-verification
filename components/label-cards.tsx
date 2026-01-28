@@ -4,11 +4,12 @@ import {useLabelContext} from "@/components/label-context";
 export const LabelCards = () => {
     const {
         uploadedFiles,
-        handleValidateAllLabels,
+        handleExtractTextFromAllLabels,
         isLoading,
         allLabelsExtracted,
         lastBatchDurationSeconds,
         lastBatchCount,
+        lastBatchGroups,
     } = useLabelContext();
 
     const formatSeconds = (value: number) =>
@@ -21,9 +22,9 @@ export const LabelCards = () => {
     const averageExtractionTimeSatisfiesThreshold = averageSeconds < 5;
     return (
         <div className="mt-3 ">
-            <div className="flex items-center justify-end gap-3">
+            <div className="flex items-start justify-end gap-3">
                 {showBatchStats && (
-                    <div className="text-right">
+                    <div className="text-right space-y-1">
                         <div className="text-xs text-muted-foreground">
                             Total text extraction time:{" "}
                             {formatSeconds(lastBatchDurationSeconds)}s
@@ -37,11 +38,44 @@ export const LabelCards = () => {
                         >
                             Avg time per label: {formatSeconds(averageSeconds)}s
                         </div>
+                        {lastBatchGroups.length > 1 && (
+                            <div className="pt-1 space-y-1">
+                                {lastBatchGroups.map((group) => {
+                                    const groupAverageIsFast =
+                                        group.averageSeconds < 5;
+                                    return (
+                                        <div
+                                            key={group.groupIndex}
+                                            className="text-[11px] text-muted-foreground"
+                                        >
+                                            Batch {group.groupIndex}:{" "}
+                                            {formatSeconds(
+                                                group.durationSeconds,
+                                            )}
+                                            s total ·{" "}
+                                            <span
+                                                className={
+                                                    groupAverageIsFast
+                                                        ? "text-green-600"
+                                                        : "text-red-600"
+                                                }
+                                            >
+                                                {formatSeconds(
+                                                    group.averageSeconds,
+                                                )}
+                                                s avg
+                                            </span>{" "}
+                                            ({group.labelCount} labels)
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
                     </div>
                 )}
-                {uploadedFiles.length > 0 && (
+                {uploadedFiles.length > 0 && !allLabelsExtracted && (
                     <Button
-                        onClick={handleValidateAllLabels}
+                        onClick={handleExtractTextFromAllLabels}
                         disabled={isLoading}
                         variant="secondary"
                         className={
@@ -50,9 +84,7 @@ export const LabelCards = () => {
                                 : "bg-emerald-500 text-white hover:bg-emerald-600"
                         }
                     >
-                        {allLabelsExtracted
-                            ? "Re-extract all labels"
-                            : "Extract text from all labels"}
+                        Extract text from all labels
                     </Button>
                 )}
             </div>

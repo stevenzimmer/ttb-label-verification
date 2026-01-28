@@ -13,9 +13,7 @@ export function LabelNav() {
                         TTB
                     </div>
                     <div>
-                        <p className="text-sm font-semibold">
-                            Label Validator
-                        </p>
+                        <p className="text-sm font-semibold">Label Validator</p>
                         <p className="text-xs text-muted-foreground">
                             Internal review workspace
                         </p>
@@ -26,6 +24,7 @@ export function LabelNav() {
                         type="button"
                         variant="outline"
                         onClick={() => setIsDrawerOpen(true)}
+                        className="text-green-700 border-green-700"
                     >
                         Accepted labels
                     </Button>
@@ -33,6 +32,7 @@ export function LabelNav() {
                         type="button"
                         variant="outline"
                         onClick={() => setIsRejectedDrawerOpen(true)}
+                        className="border-red-700 text-red-700"
                     >
                         Rejected labels
                     </Button>

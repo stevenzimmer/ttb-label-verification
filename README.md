@@ -95,3 +95,26 @@ Short “Assumptions” Bullet (even more concise)
     -   Images are resized before processing, but there is no de-skew, glare reduction, or OCR-specific preprocessing beyond resizing in `components/label-context.tsx:418`
 -   Requirement logic is heuristic and may miss edge cases
     -   Beverage type inference and requirement decisions are regex-based and approximate the real TTB rules in `lib/label-requirements.ts`
+
+## Future State: Evals-Driven Quality Loop
+
+To move from a prototype to a reliable, regression-safe system, this app can adopt a lightweight evals program that measures extraction and comparison quality over a curated gold dataset.
+
+### What the evals would measure
+
+-   Field-level extraction accuracy (exact match + normalized match)
+-   Required-field pass rate (all required fields match)
+-   Confidence calibration (high confidence should correlate with correctness)
+-   Rejection quality (rejected labels should align with actual non-compliance)
+
+### How the evals would run
+
+-   Maintain a small gold dataset of label images plus ground-truth application data (including hard cases).
+-   Run `/api/validate-label` over the dataset and score results using the same comparison logic used in the UI.
+-   Store baseline metrics in a JSON snapshot and fail CI when metrics drop below thresholds.
+
+### Why this matters
+
+-   Prevents silent regressions as prompts, OCR settings, or comparison logic change.
+-   Provides concrete quality targets for stakeholders and reviewers.
+-   Enables faster iteration because changes are validated automatically.

@@ -1,0 +1,79 @@
+[
+    {
+        "file_name": "merrymaker-brewing.jpg",
+        "brand_name": "Merrymaker Brewing",
+        "class_type_designation": "Golden Ale",
+        "alcohol_content": "Alc. 5.2% by vol.",
+        "net_contents": "12 fl. oz.",
+        "producer_name": "Merrymaker Brewing",
+        "producer_address": "Wilmington, NC",
+        "country_of_origin": "USA",
+        "gov_warning": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems."
+    },
+    {
+        "file_name": "stovewood-whiskey.jpg",
+        "brand_name": "Stovewood Whiskey",
+        "class_type_designation": "Single Barrel Straight Bourbon",
+        "alcohol_content": "Alc. 47.5% by vol. (95 proof)",
+        "net_contents": "750 ml",
+        "producer_name": "Stovewood Distillery",
+        "producer_address": "Louisville, KY",
+        "country_of_origin": "USA",
+        "gov_warning": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems."
+    },
+    {
+        "file_name": "timbercreek-vineyards.jpg",
+        "brand_name": "Timber Creek Vineyards",
+        "class_type_designation": "Chardonnay",
+        "alcohol_content": "Not stated",
+        "net_contents": "Not stated",
+        "producer_name": "Timber Creek Vineyards",
+        "producer_address": "Healdsburg, CA",
+        "country_of_origin": "USA",
+        "gov_warning": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems."
+    },
+    {
+        "file_name": "stones-throw-distillery.jpg",
+        "brand_name": "Stone's Throw Distillery",
+        "class_type_designation": "Rye Whiskey",
+        "alcohol_content": "45% Alc./Vol. (90 Proof)",
+        "net_contents": "750 ml",
+        "producer_name": "Stone's Throw Distillery",
+        "producer_address": "Louisville, KY 40206",
+        "country_of_origin": "USA",
+        "gov_warning": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems."
+    },
+    {
+        "file_name": "kilkenny-plains.jpg",
+        "brand_name": "Kilkenny Plains",
+        "class_type_designation": "Irish Whiskey",
+        "alcohol_content": "43% Alc./Vol. (86 Proof)",
+        "net_contents": "700 ml",
+        "producer_name": "Emerald Spirits Ltd.",
+        "producer_address": "Dublin, Ireland",
+        "country_of_origin": "Ireland",
+        "gov_warning": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems."
+    },
+    {
+        "file_name": "rustwood-vineyards.jpg",
+        "brand_name": "Rustwood Vineyards",
+        "class_type_designation": "Cabernet Sauvignon",
+        "alcohol_content": "Alc. 14.5% by vol.",
+        "net_contents": "750 ml",
+        "producer_name": "Rustwood Vineyards",
+        "producer_address": "St. Helena, CA",
+        "country_of_origin": "USA",
+        "gov_warning": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems."
+    },
+    {
+        "file_name": "cantina-bellavista.jpg",
+        "brand_name": "Cantina Bellavista",
+        "class_type_designation": "Brunello di Montalcino",
+        "alcohol_content": "14.5% Alc./Vol.",
+        "net_contents": "750 ml",
+        "producer_name": "Vino Imports Ltd.",
+        "producer_address": "New York, NY",
+        "country_of_origin": "USA",
+        "gov_warning": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems."
+    }
+]

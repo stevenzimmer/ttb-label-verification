@@ -1,12 +1,13 @@
 "use client";
 
 import Image from "next/image";
-import {Check, X} from "lucide-react";
+import {Check, ChevronRight, X} from "lucide-react";
 import {Button} from "@/components/ui/button";
 import {Card, CardContent} from "@/components/ui/card";
 import {useLabelContext} from "@/components/label-context";
 import {cn} from "@/lib/utils";
 import {formatFieldList} from "@/lib/format-label";
+import {buildRequirementContext} from "@/lib/label-requirements";
 interface UploadedLabelCardProps {
     index: number;
 }
@@ -18,8 +19,10 @@ export function UploadedLabelCard({index}: UploadedLabelCardProps) {
         validatingByFile,
         acceptedByFile,
         rejectedByFile,
+        applicationDataImportedByFile,
+        allLabelsExtracted,
         isLoading,
-        handleValidateLabelAtIndex,
+        setError,
         handleUnacceptLabelAtIndex,
         handleRemoveLabelAtIndex,
         handleSelectLabel,
@@ -30,24 +33,69 @@ export function UploadedLabelCard({index}: UploadedLabelCardProps) {
     } = useLabelContext();
     const file = uploadedFiles[index];
     const applicationData = applicationDataByFile[index] ?? null;
-    const summary = getLabelMatchSummary(parsedDataByFile[index] ?? null, applicationData);
+    const isApplicationDataImported = applicationDataImportedByFile[index];
+    const applicationFieldCount = applicationData
+        ? Object.values(applicationData).filter((value) => value.trim() !== "")
+              .length
+        : 0;
+    const labelData = parsedDataByFile[index] ?? null;
+    const summary = getLabelMatchSummary(labelData, applicationData);
+    const extractedFieldCount = labelData
+        ? Object.values(labelData).filter((field) => {
+              if (typeof field.value === "string") {
+                  return field.value.trim() !== "";
+              }
+              return Boolean(field.value);
+          }).length
+        : 0;
+    const totalFieldCount = labelData ? Object.keys(labelData).length : 0;
 
     const validating = validatingByFile[index];
     const accepted = acceptedByFile[index];
     const rejected = rejectedByFile[index];
     const isActive = index === activeFileIndex;
+    const extractionComplete = Boolean(summary) && !validating;
+    const requirementContext = applicationData
+        ? buildRequirementContext(parsedDataByFile[index] ?? null)
+        : null;
+    const beverageTypeLabel = requirementContext
+        ? requirementContext.beverageType === "unknown"
+            ? "Unknown type"
+            : requirementContext.beverageType[0].toUpperCase() +
+              requirementContext.beverageType.slice(1)
+        : null;
+    const originLabel = requirementContext
+        ? requirementContext.isImported
+            ? "Imported"
+            : "Domestic"
+        : null;
 
     if (!file) {
         return null;
     }
+
+    const labelCardIsReady = extractionComplete && isApplicationDataImported;
 
     return (
         <Card
             className={cn(
                 "transition-colors cursor-pointer",
                 isActive ? "border-blue-500 bg-secondary" : "hover:bg-muted/60",
+                labelCardIsReady && "bg-emerald-50 hover:bg-emerald-100",
             )}
             onClick={() => {
+                if (uploadedFiles.length > 0 && !allLabelsExtracted) {
+                    setError(
+                        "Extract text from all labels before opening label details.",
+                    );
+                    return;
+                }
+                if (!applicationDataImportedByFile[index]) {
+                    setError(
+                        "Upload application data before opening label details.",
+                    );
+                    return;
+                }
                 handleSelectLabel(index);
                 setIsPreviewDrawerOpen(true);
             }}
@@ -57,8 +105,8 @@ export function UploadedLabelCard({index}: UploadedLabelCardProps) {
                     <Image
                         src={URL.createObjectURL(file)}
                         alt={file.name}
-                        width={40}
-                        height={40}
+                        width={60}
+                        height={60}
                         className="object-contain rounded-md border mr-3"
                     />
                 </div>
@@ -76,42 +124,42 @@ export function UploadedLabelCard({index}: UploadedLabelCardProps) {
                     <p className="text-xs text-muted-foreground">
                         {(file.size / 1024).toFixed(2)} KB
                     </p>
+                    {extractionComplete && beverageTypeLabel && originLabel && (
+                        <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                            <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-700">
+                                {beverageTypeLabel}
+                            </span>
+                            <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-700">
+                                {originLabel}
+                            </span>
+                        </div>
+                    )}
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="">
                     {validating ? (
-                        <span className="text-xs font-semibold text-slate-500">
-                            Processing...
-                        </span>
+                        <div className="text-center py-4">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
+                        </div>
                     ) : (
                         summary && (
-                            <div
-                                className={cn(
-                                    "text-xs font-semibold space-y-1 text-right max-w-50",
-                                    summary.allMatched
-                                        ? "text-emerald-700"
-                                        : "text-amber-700",
-                                )}
-                            >
-                                <div>{`${summary.matched}/${summary.total}`}</div>
-                                {summary.reviewFields.length > 0 && (
-                                    <div className="line-clamp-2 text-[11px] font-medium text-amber-700">
-                                        Review:{" "}
-                                        {formatFieldList(
-                                            summary.reviewFields,
-                                            2,
-                                        )}
+                            <>
+                                <div className="text-xs font-semibold space-y-1 text-right max-w-50 text-emerald-700">
+                                    <div>{`${extractedFieldCount}/${totalFieldCount} fields extracted`}</div>
+                                </div>
+                                {isApplicationDataImported && (
+                                    <div className="mt-1 text-xs font-medium text-emerald-700">
+                                        {applicationFieldCount} application
+                                        fields added
                                     </div>
                                 )}
-                                {summary.issueFields.length > 0 && (
-                                    <div className="line-clamp-2 text-[11px] font-medium text-amber-700">
-                                        Issues:{" "}
-                                        {formatFieldList(
-                                            summary.issueFields,
-                                            2,
-                                        )}
+
+                                {labelCardIsReady && (
+                                    <div className="mt-1 flex items-center justify-end gap-1 text-xs font-medium text-muted-foreground">
+                                        <span>View details</span>
+                                        <ChevronRight className="h-3.5 w-3.5" />
                                     </div>
                                 )}
-                            </div>
+                            </>
                         )
                     )}
                     {summary && !validating && (

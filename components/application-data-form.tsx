@@ -10,10 +10,13 @@ export const ApplicationDataForm = ({comparisons}: {
         handleApplicationDataChange,
         activeFileIndex,
         applicationDataByFile,
+        applicationDataImportedByFile,
     } = useLabelContext();
 
     const comparisonSummary = getComparisonSummary(comparisons);
     const applicationData = applicationDataByFile[activeFileIndex] ?? null;
+    const isApplicationDataImported =
+        applicationDataImportedByFile[activeFileIndex];
     const applicationDataKeys: Array<keyof ApplicationData> = [
         "brand_name",
         "class_type_designation",
@@ -58,6 +61,7 @@ export const ApplicationDataForm = ({comparisons}: {
                             }
                             className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-slate-400 focus:outline-none"
                             placeholder="Enter application value"
+                            disabled={isApplicationDataImported}
                         />
                     </label>
                 ))}

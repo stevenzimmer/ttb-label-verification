@@ -19,6 +19,7 @@ export interface RejectedLabelRecord {
         lastModified: number;
     };
     extracted: LabelExtraction;
+    rejectionReason: string;
     rejectedAt: string;
 }
 

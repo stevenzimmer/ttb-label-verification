@@ -24,6 +24,13 @@ export interface ProcessingTime {
     labelName: string;
 }
 
+export interface BatchGroupStat {
+    groupIndex: number;
+    labelCount: number;
+    durationSeconds: number;
+    averageSeconds: number;
+}
+
 export interface LabelContextValue {
     uploadedFiles: File[];
     setUploadedFiles: React.Dispatch<React.SetStateAction<File[]>>;
@@ -39,6 +46,8 @@ export interface LabelContextValue {
     setParsedDataByFile: React.Dispatch<React.SetStateAction<Array<LabelExtraction | null>>>;
     applicationDataByFile: ApplicationData[];
     setApplicationDataByFile: React.Dispatch<React.SetStateAction<ApplicationData[]>>;
+    applicationDataImportedByFile: boolean[];
+    setApplicationDataImportedByFile: React.Dispatch<React.SetStateAction<boolean[]>>;
     validatingByFile: boolean[];
     setValidatingByFile: React.Dispatch<React.SetStateAction<boolean[]>>;
     savingByFile: boolean[];
@@ -47,12 +56,14 @@ export interface LabelContextValue {
     setAcceptedByFile: React.Dispatch<React.SetStateAction<boolean[]>>;
     rejectedByFile: boolean[];
     setRejectedByFile: React.Dispatch<React.SetStateAction<boolean[]>>;
+    rejectionReasonByFile: string[];
+    showRejectionReasonByFile: boolean[];
     savedLabels: SavedLabelRecord[];
     setSavedLabels: React.Dispatch<React.SetStateAction<SavedLabelRecord[]>>;
     rejectedLabels: RejectedLabelRecord[];
     setRejectedLabels: React.Dispatch<React.SetStateAction<RejectedLabelRecord[]>>;
     isDrawerOpen: boolean;
-        setIsDrawerOpen: React.Dispatch<React.SetStateAction<boolean>>;
+    setIsDrawerOpen: React.Dispatch<React.SetStateAction<boolean>>;
     isRejectedDrawerOpen: boolean;
     setIsRejectedDrawerOpen: React.Dispatch<React.SetStateAction<boolean>>;
     isPreviewDrawerOpen: boolean;
@@ -65,17 +76,21 @@ export interface LabelContextValue {
     setProcessingTimes: React.Dispatch<React.SetStateAction<ProcessingTime[]>>;
     lastBatchDurationSeconds: number | null;
     lastBatchCount: number;
-    hasUploads: boolean;
+    lastBatchGroups: BatchGroupStat[];
     allLabelsExtracted: boolean;
-    handleValidateAllLabels: () => Promise<void>;
-    handleValidateLabelAtIndex: (index: number) => Promise<void>;
+    handleExtractTextFromAllLabels: () => Promise<void>;
     handleRemoveLabelAtIndex: (index: number) => void;
     handleAcceptLabelAtIndex: (index: number) => Promise<void>;
     handleUnacceptLabelAtIndex: (index: number) => void;
     handleRejectLabelAtIndex: (index: number) => Promise<void>;
     handleUnrejectLabelAtIndex: (index: number) => void;
-    handleLabelValidate: () => Promise<void>;
-    validateLabel: (file: File, index: number, setLoading?: boolean) => Promise<LabelExtraction | null>;
+    handleRejectionReasonChange: (index: number, value: string) => void;
+    handleShowRejectionReasonAtIndex: (index: number, value: boolean) => void;
+    handleLabelTextExtract: () => Promise<void>;
+    extractTextFromLabel: (file: File, index: number, setLoading?: boolean) => Promise<LabelExtraction | null>;
+    handleApplicationDataImport: (file: File) => Promise<void>;
+    importedApplicationErrors: string[];
+    setImportedApplicationErrors: React.Dispatch<React.SetStateAction<string[]>>;
     handleSelectLabel: (index: number) => void;
     handleFilesUpload: (event: React.ChangeEvent<HTMLInputElement>) => void;
     handleApplicationDataChange: (
@@ -126,13 +141,15 @@ export function LabelProvider({
     const [acceptedByFile, setAcceptedByFile] = useState<boolean[]>([]);
     const [savedLabels, setSavedLabels] = useState<SavedLabelRecord[]>([]);
     const [rejectedByFile, setRejectedByFile] = useState<boolean[]>([]);
+    const [rejectionReasonByFile, setRejectionReasonByFile] = useState<string[]>([]);
+    const [showRejectionReasonByFile, setShowRejectionReasonByFile] = useState<boolean[]>([]);
+    const [applicationDataImportedByFile, setApplicationDataImportedByFile] = useState<boolean[]>([]);
     const [rejectedLabels, setRejectedLabels] = useState<
         RejectedLabelRecord[]
     >([]);
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
     const [isRejectedDrawerOpen, setIsRejectedDrawerOpen] = useState(false);
     const [isPreviewDrawerOpen, setIsPreviewDrawerOpen] = useState(false);
-    const hasUploads = uploadedFiles.length > 0;
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [processingTimes, setProcessingTimes] = useState<ProcessingTime[]>(
@@ -142,6 +159,54 @@ export function LabelProvider({
         number | null
     >(null);
     const [lastBatchCount, setLastBatchCount] = useState(0);
+    const [lastBatchGroups, setLastBatchGroups] = useState<BatchGroupStat[]>(
+        [],
+    );
+    const [importedApplicationErrors, setImportedApplicationErrors] = useState<
+        string[]
+    >([]);
+
+    const parseCsvLine = (line: string) => {
+        const cells: string[] = [];
+        let current = "";
+        let inQuotes = false;
+        for (let i = 0; i < line.length; i += 1) {
+            const char = line[i];
+            if (char === "\"") {
+                if (inQuotes && line[i + 1] === "\"") {
+                    current += "\"";
+                    i += 1;
+                } else {
+                    inQuotes = !inQuotes;
+                }
+            } else if (char === "," && !inQuotes) {
+                cells.push(current);
+                current = "";
+            } else {
+                current += char;
+            }
+        }
+        cells.push(current);
+        return cells.map((cell) => cell.trim());
+    };
+
+    const parseCsv = (text: string): Record<string, string>[] => {
+        const [headerLine, ...lines] = text
+            .split(/\r?\n/)
+            .map((line) => line.trim())
+            .filter(Boolean);
+        if (!headerLine) {
+            return [];
+        }
+        const headers = parseCsvLine(headerLine);
+        return lines.map((line) => {
+            const cells = parseCsvLine(line);
+            return headers.reduce((acc, key, index) => {
+                acc[key] = cells[index] ?? "";
+                return acc;
+            }, {} as Record<string, string>);
+        });
+    };
 
     const getLabelMatchSummary = (
         data: LabelExtraction | null,
@@ -181,7 +246,8 @@ export function LabelProvider({
             };
         }
 
-        const context = buildRequirementContext(applicationData, data);
+        const context = buildRequirementContext( data);
+
         const requirements = getFieldRequirements(context);
         const requiredKeys = entries
             .map(([key]) => key)
@@ -231,7 +297,7 @@ export function LabelProvider({
                 .replace(/\s+/g, " ")
                 .trim();
         const comparisons: Record<string, LabelFieldComparison> = {};
-        const context = buildRequirementContext(applicationData, labelData);
+        const context = buildRequirementContext( labelData);
         const requirements = getFieldRequirements(context);
 
         (Object.entries(labelData) as Array<
@@ -312,7 +378,7 @@ export function LabelProvider({
         if (files && files.length > 0) {
             const filesArray = Array.from(files);
             const existingNames = new Set(uploadedFiles.map((file) => file.name));
-            const maxFileSizeBytes = 500 * 1024;
+            const maxFileSizeBytes = 1024 * 1024; // 1MB
             const oversizedFiles = filesArray.filter(
                 (file) => file.size > maxFileSizeBytes,
             );
@@ -337,7 +403,7 @@ export function LabelProvider({
                     new Set(oversizedFiles.map((file) => file.name)),
                 ).join(", ");
                 errorMessages.push(
-                    `Files must be 500KB or smaller: ${oversizedList}.`,
+                    `Files must be 1MB or smaller: ${oversizedList}.`,
                 );
             }
             setError(errorMessages.length > 0 ? errorMessages.join(" ") : null);
@@ -355,6 +421,10 @@ export function LabelProvider({
                         .fill(null)
                         .map(() => createEmptyApplicationData()),
                 ]);
+                setApplicationDataImportedByFile((prev) => [
+                    ...prev,
+                    ...new Array(uniqueNewFiles.length).fill(false),
+                ]);
                 setValidatingByFile((prev) => [
                     ...prev,
                     ...new Array(uniqueNewFiles.length).fill(false),
@@ -371,11 +441,18 @@ export function LabelProvider({
                     ...prev,
                     ...new Array(uniqueNewFiles.length).fill(false),
                 ]);
+                setRejectionReasonByFile((prev) => [
+                    ...prev,
+                    ...new Array(uniqueNewFiles.length).fill(""),
+                ]);
+                setShowRejectionReasonByFile((prev) => [
+                    ...prev,
+                    ...new Array(uniqueNewFiles.length).fill(false),
+                ]);
                 const file = uniqueNewFiles[0];
                 setActiveFileIndex(startIndex);
                 setSelectedFile(file);
                 setPreviewUrl(URL.createObjectURL(file));
-                // setIsPreviewDrawerOpen(true);
             }
         }
         if (event.target) {
@@ -383,14 +460,96 @@ export function LabelProvider({
         }
     };
 
-  const handleValidateLabelAtIndex = async (index: number) => {
-        const file = uploadedFiles[index];
-        if (!file) {
-            setError("Please select a label to validate first");
+    const handleApplicationDataImport = async (file: File) => {
+        setImportedApplicationErrors([]);
+        const text = await file.text();
+        let rows: Array<ApplicationData & {file_name?: string}> = [];
+        try {
+            if (file.name.toLowerCase().endsWith(".json")) {
+                const parsed = JSON.parse(text) as unknown;
+                rows = Array.isArray(parsed) ? parsed : [];
+            } else {
+                const parsed = parseCsv(text);
+                rows = parsed.map((row) => ({
+                    file_name: row.file_name,
+                    brand_name: row.brand_name ?? "",
+                    class_type_designation:
+                        row.class_type_designation ?? "",
+                    alcohol_content: row.alcohol_content ?? "",
+                    net_contents: row.net_contents ?? "",
+                    producer_name: row.producer_name ?? "",
+                    producer_address: row.producer_address ?? "",
+                    country_of_origin: row.country_of_origin ?? "",
+                    gov_warning: row.gov_warning ?? "",
+                }));
+            }
+        } catch (error) {
+            setImportedApplicationErrors([
+                "Failed to parse application data file.",
+            ]);
             return;
         }
-        setActiveFileIndex(index);
-        await validateLabel(file, index);
+
+        if (rows.length === 0) {
+            setImportedApplicationErrors([
+                "No application rows found in the import file.",
+            ]);
+            return;
+        }
+
+        if (uploadedFiles.length === 0) {
+            setImportedApplicationErrors([
+                "Upload label images before importing application data.",
+            ]);
+            return;
+        }
+
+        const errors: string[] = [];
+        const nextApplicationData = [...applicationDataByFile];
+        const nextImportedFlags = [...applicationDataImportedByFile];
+
+        rows.forEach((row, rowIndex) => {
+            const normalized: ApplicationData = {
+                brand_name: row.brand_name ?? "",
+                class_type_designation: row.class_type_designation ?? "",
+                alcohol_content: row.alcohol_content ?? "",
+                net_contents: row.net_contents ?? "",
+                producer_name: row.producer_name ?? "",
+                producer_address: row.producer_address ?? "",
+                country_of_origin: row.country_of_origin ?? "",
+                gov_warning: row.gov_warning ?? "",
+            };
+
+            if (row.file_name) {
+                const matchIndex = uploadedFiles.findIndex(
+                    (uploaded) =>
+                        uploaded.name.toLowerCase() ===
+                        row.file_name!.toLowerCase(),
+                );
+                if (matchIndex === -1) {
+                    errors.push(
+                        `Row ${rowIndex + 1}: no uploaded file named "${row.file_name}".`,
+                    );
+                    return;
+                }
+                nextApplicationData[matchIndex] = normalized;
+                nextImportedFlags[matchIndex] = true;
+                return;
+            }
+
+            if (rowIndex >= uploadedFiles.length) {
+                errors.push(
+                    `Row ${rowIndex + 1}: no uploaded file at position ${rowIndex + 1}.`,
+                );
+                return;
+            }
+            nextApplicationData[rowIndex] = normalized;
+            nextImportedFlags[rowIndex] = true;
+        });
+
+        setApplicationDataByFile(nextApplicationData);
+        setApplicationDataImportedByFile(nextImportedFlags);
+        setImportedApplicationErrors(errors);
     };
 
     const addProcessingTime = (
@@ -410,7 +569,7 @@ export function LabelProvider({
 };
 
 
-const validateLabel = async (
+const extractTextFromLabel = async (
         file: File,
         index: number,
         setLoading: boolean = true,
@@ -488,17 +647,29 @@ const validateLabel = async (
         const nextApplicationData = applicationDataByFile.filter(
             (_, i) => i !== index,
         );
+        const nextApplicationDataImported = applicationDataImportedByFile.filter(
+            (_, i) => i !== index,
+        );
         const nextValidating = validatingByFile.filter((_, i) => i !== index);
         const nextSaving = savingByFile.filter((_, i) => i !== index);
         const nextAccepted = acceptedByFile.filter((_, i) => i !== index);
         const nextRejected = rejectedByFile.filter((_, i) => i !== index);
+        const nextRejectionReasons = rejectionReasonByFile.filter(
+            (_, i) => i !== index,
+        );
+        const nextShowRejectionReason = showRejectionReasonByFile.filter(
+            (_, i) => i !== index,
+        );
         setUploadedFiles(nextFiles);
         setParsedDataByFile(nextParsed);
         setApplicationDataByFile(nextApplicationData);
+        setApplicationDataImportedByFile(nextApplicationDataImported);
         setValidatingByFile(nextValidating);
         setSavingByFile(nextSaving);
         setAcceptedByFile(nextAccepted);
         setRejectedByFile(nextRejected);
+        setRejectionReasonByFile(nextRejectionReasons);
+        setShowRejectionReasonByFile(nextShowRejectionReason);
         setError(null);
 
         if (nextFiles.length === 0) {
@@ -523,14 +694,13 @@ const validateLabel = async (
         uploadedFiles.length > 0 &&
         uploadedFiles.every((_, index) => Boolean(parsedDataByFile[index]));
 
-    const handleValidateAllLabels = async () => {
+    const handleExtractTextFromAllLabels = async () => {
         if (uploadedFiles.length === 0) {
             setError("Please upload at least one label first");
             return;
         }
-        const initialActiveIndex = activeFileIndex;
         const shouldRestoreActiveIndex =
-            !allLabelsExtracted && Boolean(parsedDataByFile[initialActiveIndex]);
+            !allLabelsExtracted && Boolean(parsedDataByFile[activeFileIndex]);
         setIsLoading(true);
         setError(null);
         setValidatingByFile(new Array(uploadedFiles.length).fill(true));
@@ -543,9 +713,9 @@ const validateLabel = async (
             setIsLoading(false);
             return;
         }
-        const batchStartTime = performance.now();
         setLastBatchDurationSeconds(null);
         setLastBatchCount(indices.length);
+        setLastBatchGroups([]);
         indices.forEach((index) => {
             if (allLabelsExtracted) {
                 return;
@@ -558,26 +728,45 @@ const validateLabel = async (
                 });
             }
         });
-        let cursor = 0;
-        const runWorker = async () => {
-            while (cursor < indices.length) {
-                const index = indices[cursor];
-                cursor += 1;
-                setActiveFileIndex(index);
-                await validateLabel(uploadedFiles[index], index, false);
-            }
-        };
         const concurrency = 3;
-        await Promise.all(
-            Array.from({length: Math.min(concurrency, indices.length)}).map(
-                () => runWorker(),
-            ),
+        const groups: number[][] = [];
+        for (let i = 0; i < indices.length; i += concurrency) {
+            groups.push(indices.slice(i, i + concurrency));
+        }
+
+        const groupStats: BatchGroupStat[] = [];
+        for (let groupIndex = 0; groupIndex < groups.length; groupIndex += 1) {
+            const group = groups[groupIndex];
+            const groupStartTime = performance.now();
+            await Promise.all(
+                group.map(async (index) => {
+                    setActiveFileIndex(index);
+                    await extractTextFromLabel(uploadedFiles[index], index, false);
+                }),
+            );
+            const durationSeconds = (performance.now() - groupStartTime) / 1000;
+            const roundedSeconds = Math.round(durationSeconds * 10) / 10;
+            const labelCount = group.length;
+            groupStats.push({
+                groupIndex: groupIndex + 1,
+                labelCount,
+                durationSeconds: roundedSeconds,
+                averageSeconds:
+                    labelCount > 0
+                        ? Math.round((roundedSeconds / labelCount) * 10) / 10
+                        : 0,
+            });
+        }
+
+        const totalDurationSeconds = groupStats.reduce(
+            (sum, stat) => sum + stat.durationSeconds,
+            0,
         );
-        const durationSeconds = (performance.now() - batchStartTime) / 1000;
-        const roundedSeconds = Math.round(durationSeconds * 10) / 10;
-        setLastBatchDurationSeconds(roundedSeconds);
+        const roundedTotalSeconds = Math.round(totalDurationSeconds * 10) / 10;
+        setLastBatchGroups(groupStats);
+        setLastBatchDurationSeconds(roundedTotalSeconds);
         if (shouldRestoreActiveIndex) {
-            setActiveFileIndex(initialActiveIndex);
+            setActiveFileIndex(activeFileIndex);
         }
         setIsLoading(false);
     };
@@ -615,6 +804,11 @@ const validateLabel = async (
                 return next;
             });
             setRejectedByFile((prev) => {
+                const next = [...prev];
+                next[index] = false;
+                return next;
+            });
+            setShowRejectionReasonByFile((prev) => {
                 const next = [...prev];
                 next[index] = false;
                 return next;
@@ -672,6 +866,11 @@ const validateLabel = async (
             setError("Please validate a label before rejecting it");
             return;
         }
+        const rejectionReason = (rejectionReasonByFile[index] ?? "").trim();
+        if (!rejectionReason) {
+            setError("Please provide a reason for rejecting this label");
+            return;
+        }
         setSavingByFile((prev) => {
             const next = [...prev];
             next[index] = true;
@@ -687,6 +886,7 @@ const validateLabel = async (
                     lastModified: file.lastModified,
                 },
                 extracted,
+                rejectionReason,
                 rejectedAt: new Date().toISOString(),
             };
             await new Promise((resolve) => setTimeout(resolve, 400));
@@ -694,6 +894,11 @@ const validateLabel = async (
             setRejectedByFile((prev) => {
                 const next = [...prev];
                 next[index] = true;
+                return next;
+            });
+            setShowRejectionReasonByFile((prev) => {
+                const next = [...prev];
+                next[index] = false;
                 return next;
             });
             setAcceptedByFile((prev) => {
@@ -735,6 +940,11 @@ const validateLabel = async (
             next[index] = false;
             return next;
         });
+        setShowRejectionReasonByFile((prev) => {
+            const next = [...prev];
+            next[index] = false;
+            return next;
+        });
         setRejectedLabels((prev) =>
             prev.filter(
                 (record) =>
@@ -747,12 +957,29 @@ const validateLabel = async (
         );
     };
 
-        const handleLabelValidate = async () => {
+    const handleRejectionReasonChange = (index: number, value: string) => {
+        setRejectionReasonByFile((prev) => {
+            const next = [...prev];
+            next[index] = value;
+            return next;
+        });
+        setError(null);
+    };
+
+    const handleShowRejectionReasonAtIndex = (index: number, value: boolean) => {
+        setShowRejectionReasonByFile((prev) => {
+            const next = [...prev];
+            next[index] = value;
+            return next;
+        });
+    };
+
+    const handleLabelTextExtract = async () => {
         if (!selectedFile) {
-            setError("Please select a label to validate first");
+            setError("Please select a label to extract text from first");
             return;
         }
-        await validateLabel(selectedFile, activeFileIndex);
+        await extractTextFromLabel(selectedFile, activeFileIndex);
     };
 
     const handleApplicationDataChange = (
@@ -793,6 +1020,8 @@ const validateLabel = async (
             setParsedDataByFile,
             applicationDataByFile,
             setApplicationDataByFile,
+            applicationDataImportedByFile,
+            setApplicationDataImportedByFile,
             validatingByFile,
             setValidatingByFile,
             savingByFile,
@@ -803,6 +1032,8 @@ const validateLabel = async (
             setSavedLabels,
             rejectedByFile,
             setRejectedByFile,
+            rejectionReasonByFile,
+            showRejectionReasonByFile,
             rejectedLabels,
             setRejectedLabels,
             isDrawerOpen,
@@ -819,18 +1050,22 @@ const validateLabel = async (
             setProcessingTimes,
             lastBatchDurationSeconds,
             lastBatchCount,
-            hasUploads,
+            lastBatchGroups,
             allLabelsExtracted,
-            handleValidateAllLabels,
-            handleValidateLabelAtIndex,
+            handleExtractTextFromAllLabels,
             handleRemoveLabelAtIndex,
             handleAcceptLabelAtIndex,
             handleUnacceptLabelAtIndex,
             handleRejectLabelAtIndex,
             handleUnrejectLabelAtIndex,
-            handleLabelValidate,
+            handleRejectionReasonChange,
+            handleShowRejectionReasonAtIndex,
+            handleLabelTextExtract,
+            handleApplicationDataImport,
+            importedApplicationErrors,
+            setImportedApplicationErrors,
             handleSelectLabel,
-            validateLabel,
+            extractTextFromLabel,
             handleFilesUpload,
             handleApplicationDataChange,
             compareLabelToApplication,

@@ -3,7 +3,7 @@ import {AcceptedLabelsDrawer} from "@/components/accepted-labels-drawer";
 import {RejectedLabelsDrawer} from "@/components/rejected-labels-drawer";
 import {useLabelContext} from "@/components/label-context";
 import {LabelCards} from "@/components/label-cards";
-import {ImageUpload} from "@/components/image-upload";
+import {LabelVerificationWorkflow} from "@/components/label-verification-workflow";
 import {LabelExtractionDrawer} from "@/components/label-extraction-drawer";
 export const LabelValidatorWrapper = () => {
     const {uploadedFiles} = useLabelContext();
@@ -15,7 +15,7 @@ export const LabelValidatorWrapper = () => {
             <LabelExtractionDrawer />
             {/* Upload Section */}
             <div className="max-w-3xl mx-auto py-16">
-                <ImageUpload />
+                <LabelVerificationWorkflow />
                 {uploadedFiles.length > 0 && <LabelCards />}
             </div>
         </div>

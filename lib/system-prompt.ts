@@ -23,7 +23,7 @@ Field guidance:
 - producer_address: city/state/country or full address near producer/importer.
 - country_of_origin:
   - Only if explicitly present (often for imports).
-  - Do not infer the country from the address.
+  - You can infer the country from the address.
 - gov_warning:
   - Extract the FULL warning text if visible.
   - The lead-in must be exactly "GOVERNMENT WARNING:" if present.

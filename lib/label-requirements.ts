@@ -37,12 +37,10 @@ export const parseAbvPercent = (value: string | null | undefined) => {
 };
 
 export const inferBeverageType = (
-  applicationData: ApplicationData,
   labelData: LabelExtraction | null,
 ): BeverageType => {
-  const classType = normalize(applicationData.class_type_designation);
   const labelClassType = normalize(labelData?.class_type_designation.value ?? "");
-  const combined = `${classType} ${labelClassType}`.trim();
+  const combined = labelClassType.trim();
 
   if (/(bourbon|whiskey|whisky|vodka|rum|gin|tequila|mezcal|brandy|cognac|distilled|distill(ed|ery)|spirit)/.test(combined)) {
     return "spirit";
@@ -57,36 +55,33 @@ export const inferBeverageType = (
   return "unknown";
 };
 
-export const inferIsImported = (applicationData: ApplicationData) => {
-  const country = normalize(applicationData.country_of_origin);
-  if (!country) {
+export const inferIsImported = (
+  labelData: LabelExtraction | null,
+) => {
+  const labelCountry = normalize(labelData?.country_of_origin.value ?? "");
+  if (!labelCountry) {
     return false;
   }
-  return !USA_PATTERNS.some((pattern) => country.includes(pattern));
+  return !USA_PATTERNS.some((pattern) => labelCountry.includes(pattern));
 };
 
 export const hasAlcoholClaim = (
-  applicationData: ApplicationData,
   labelData: LabelExtraction | null,
 ) => {
-  const appAlcohol = applicationData.alcohol_content;
   const labelAlcohol = labelData?.alcohol_content.value ?? "";
-  const classType = applicationData.class_type_designation;
   const labelClassType = labelData?.class_type_designation.value ?? "";
-  const combined = `${appAlcohol} ${labelAlcohol} ${classType} ${labelClassType}`;
+  const combined = `${labelAlcohol} ${labelClassType}`.trim();
   return /(\d+(?:\.\d+)?\s*%|alc\.?\/?\s*vol|alcohol by volume|abv|proof)/i.test(combined);
 };
 
 export const buildRequirementContext = (
-  applicationData: ApplicationData,
   labelData: LabelExtraction | null,
 ): RequirementContext => {
-  const beverageType = inferBeverageType(applicationData, labelData);
-  const isImported = inferIsImported(applicationData);
-  const abvPercent =
-    parseAbvPercent(applicationData.alcohol_content) ??
-    parseAbvPercent(labelData?.alcohol_content.value);
-  const alcoholClaim = hasAlcoholClaim(applicationData, labelData);
+  const beverageType = inferBeverageType( labelData);
+  const isImported = inferIsImported( labelData);
+  // Treat ABV as a label claim for requirement logic.
+  const abvPercent = parseAbvPercent(labelData?.alcohol_content.value);
+  const alcoholClaim = hasAlcoholClaim(labelData);
 
   return {
     beverageType,
@@ -145,7 +140,8 @@ export const getFieldRequirements = (
 
   const isSpirit = context.beverageType === "spirit";
   const isWine = context.beverageType === "wine";
-  const wineNeedsAbv = isWine && context.abvPercent !== null && context.abvPercent >= 14;
+  const isBeer = context.beverageType === "beer";
+  const wineNeedsAbv = isWine && context.abvPercent !== null && context.abvPercent >= 15;
   const alcoholClaimNeedsAbv = context.hasAlcoholClaim;
 
   if (isSpirit || wineNeedsAbv || alcoholClaimNeedsAbv) {
@@ -154,11 +150,11 @@ export const getFieldRequirements = (
       reasonParts.push("Required for distilled spirits.");
     }
     if (wineNeedsAbv) {
-      reasonParts.push("Required for wine at or above 14% ABV.");
+      reasonParts.push("Required for wine at or above 15% ABV.");
     }
-    if (!isSpirit && !wineNeedsAbv && alcoholClaimNeedsAbv) {
-      reasonParts.push("Required because an alcohol claim is present.");
-    }
+    // if (!isSpirit && !wineNeedsAbv && alcoholClaimNeedsAbv) {
+    //   reasonParts.push("Required because an alcohol claim is present.");
+    // }
     requirements.alcohol_content = {
       required: true,
       reason: reasonParts.join(" ") || "Conditionally required.",
@@ -168,7 +164,7 @@ export const getFieldRequirements = (
       required: false,
       reason: "Optional for wine below 14% ABV when no alcohol claim is made.",
     };
-  } else if (context.beverageType === "beer") {
+  } else if (isBeer) {
     requirements.alcohol_content = {
       required: false,
       reason: "Optional for beer unless an alcohol claim is made.",
