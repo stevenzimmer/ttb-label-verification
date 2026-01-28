@@ -6,13 +6,15 @@ export const LabelUpload = () => {
         handleFilesUpload,
         allLabelsExtracted,
         uploadedFiles,
+        isLoading,
     } = useLabelContext();
     const fileInputRef = useRef<HTMLInputElement | null>(null);
+    const uploadDisabled = allLabelsExtracted || isLoading;
 
     return (
         <label
             className={`block rounded-lg py-6 ${
-                allLabelsExtracted
+                uploadDisabled
                     ? "cursor-not-allowed opacity-50"
                     : "opacity-100 cursor-pointer"
             } ${
@@ -26,7 +28,7 @@ export const LabelUpload = () => {
                 className="hidden"
                 accept="image/*"
                 onChange={handleFilesUpload}
-                disabled={allLabelsExtracted}
+                disabled={uploadDisabled}
                 multiple
                 ref={fileInputRef}
             />

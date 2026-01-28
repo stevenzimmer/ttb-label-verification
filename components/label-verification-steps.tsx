@@ -2,8 +2,11 @@ import {Check} from "lucide-react";
 import {useLabelContext} from "./label-context";
 
 export const LabelVerificationSteps = () => {
-    const {allLabelsExtracted, uploadedFiles, applicationDataImportedByFile} =
-        useLabelContext();
+    const {
+        allLabelsExtracted,
+        uploadedFiles,
+        applicationDataImportedByFile,
+    } = useLabelContext();
     const hasImportedApplicationData = applicationDataImportedByFile.some(
         Boolean,
     );
@@ -22,11 +25,7 @@ export const LabelVerificationSteps = () => {
                             : "border-gray-300 text-gray-700"
                     }`}
                 >
-                    {step1Complete ? (
-                        <Check className="h-3.5 w-3.5" />
-                    ) : (
-                        "1"
-                    )}
+                    {step1Complete ? <Check className="h-3.5 w-3.5" /> : "1"}
                 </span>
                 Upload label images
             </li>
@@ -38,14 +37,12 @@ export const LabelVerificationSteps = () => {
                             : "border-gray-300 text-gray-700"
                     }`}
                 >
-                    {step2Complete ? (
-                        <Check className="h-3.5 w-3.5" />
-                    ) : (
-                        "2"
-                    )}
+                    {step2Complete ? <Check className="h-3.5 w-3.5" /> : "2"}
                 </span>
-                Verify the correct labels are uploaded and then click
-                <strong>Extract text from all labels</strong> button
+                <p className={currentStep < 2 ? "text-gray-300" : ""}>
+                    Verify the correct labels are uploaded and then click{" "}
+                    <strong>Extract text from all labels</strong> button
+                </p>
             </li>
             <li className="flex items-center gap-2">
                 <span
@@ -57,13 +54,11 @@ export const LabelVerificationSteps = () => {
                             : "border-gray-300 text-gray-400"
                     }`}
                 >
-                    {step3Complete ? (
-                        <Check className="h-3.5 w-3.5" />
-                    ) : (
-                        "3"
-                    )}
+                    {step3Complete ? <Check className="h-3.5 w-3.5" /> : "3"}
                 </span>
-                Upload application data (CSV/JSON)
+                <p className={currentStep < 3 ? "text-gray-300" : ""}>
+                    Upload application data (CSV/JSON)
+                </p>
             </li>
         </ol>
     );

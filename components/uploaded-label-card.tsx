@@ -139,6 +139,9 @@ export function UploadedLabelCard({index}: UploadedLabelCardProps) {
                     {validating ? (
                         <div className="text-center py-4">
                             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
+                            <span className="text-xs text-gray-900">
+                                Extraction in progress...
+                            </span>
                         </div>
                     ) : (
                         summary && (

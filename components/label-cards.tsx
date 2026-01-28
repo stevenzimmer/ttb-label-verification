@@ -1,12 +1,8 @@
 import {UploadedLabelCard} from "@/components/uploaded-label-card";
-import {Button} from "@/components/ui/button";
 import {useLabelContext} from "@/components/label-context";
 export const LabelCards = () => {
     const {
         uploadedFiles,
-        handleExtractTextFromAllLabels,
-        isLoading,
-        allLabelsExtracted,
         lastBatchDurationSeconds,
         lastBatchCount,
         lastBatchGroups,
@@ -72,20 +68,6 @@ export const LabelCards = () => {
                             </div>
                         )}
                     </div>
-                )}
-                {uploadedFiles.length > 0 && !allLabelsExtracted && (
-                    <Button
-                        onClick={handleExtractTextFromAllLabels}
-                        disabled={isLoading}
-                        variant="secondary"
-                        className={
-                            allLabelsExtracted
-                                ? "bg-blue-100 text-blue-900 hover:bg-blue-200"
-                                : "bg-emerald-500 text-white hover:bg-emerald-600"
-                        }
-                    >
-                        Extract text from all labels
-                    </Button>
                 )}
             </div>
 
