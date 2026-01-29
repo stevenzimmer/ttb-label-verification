@@ -7,7 +7,6 @@ import {Card, CardContent} from "@/components/ui/card";
 import {useLabelContext} from "@/components/label-context";
 import {useToast} from "@/components/ui/use-toast";
 import {cn} from "@/lib/utils";
-import {formatFieldList} from "@/lib/format-label";
 import {buildRequirementContext} from "@/lib/label-requirements";
 interface UploadedLabelCardProps {
     index: number;
