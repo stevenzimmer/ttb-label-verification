@@ -55,7 +55,7 @@ export const LabelValidationWorkflow = () => {
     }, [importedApplicationErrors, toast]);
 
     return (
-        <div>
+        <div className="lg:sticky lg:top-6 h-fit self-start">
             <div className="px-6">
                 <h1 className="mb-3">Label validation workflow</h1>
                 <LabelValidationSteps />

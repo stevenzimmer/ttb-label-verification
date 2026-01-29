@@ -5,7 +5,6 @@ import {useLabelContext} from "@/components/label-context";
 import {LabelCards} from "@/components/label-cards";
 import {LabelValidationWorkflow} from "@/components/label-validation-workflow";
 import {LabelExtractionDrawer} from "@/components/label-extraction-drawer";
-import {LabelValidationSteps} from "./label-validation-steps";
 export const LabelValidationWrapper = () => {
     const {uploadedFiles} = useLabelContext();
     const hasUploadedFiles = uploadedFiles.length > 0;
