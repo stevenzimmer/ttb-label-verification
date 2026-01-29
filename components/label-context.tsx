@@ -170,7 +170,7 @@ export function LabelProvider({
 
     const toastError = (description: string, title = "Validation error") => {
         toast({
-            variant: "destructive",
+            variant: "default",
             title,
             description,
         });
@@ -742,7 +742,7 @@ const extractTextFromLabel = async (
                 });
             }
         });
-        const concurrency = 3;
+        const concurrency = uploadedFiles.length;
         const groups: number[][] = [];
         for (let i = 0; i < indices.length; i += concurrency) {
             groups.push(indices.slice(i, i + concurrency));

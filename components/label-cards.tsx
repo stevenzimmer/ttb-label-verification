@@ -17,16 +17,19 @@ export const LabelCards = () => {
         : 0;
     const averageExtractionTimeSatisfiesThreshold = averageSeconds < 5;
     return (
-        <div className="mt-3 ">
+        <div className="mt-3 lg:mt-0">
+            <div className="mb-3">
+                <h2 className="text-2xl text-center">Uploaded labels</h2>
+            </div>
             <div className="flex items-start justify-end gap-3">
                 {showBatchStats && (
-                    <div className="text-right space-y-1">
-                        <div className="text-xs text-muted-foreground">
+                    <div className="text-right space-y-1 bg-slate-100 p-3 mb-6">
+                        <div className="text-sm text-muted-foreground">
                             Total text extraction time:{" "}
                             {formatSeconds(lastBatchDurationSeconds)}s
                         </div>
                         <div
-                            className={`text-xs ${
+                            className={`text-sm ${
                                 averageExtractionTimeSatisfiesThreshold
                                     ? "text-green-600"
                                     : "text-red-600"
@@ -71,7 +74,7 @@ export const LabelCards = () => {
                 )}
             </div>
 
-            <div className="w-full mt-3 space-y-2">
+            <div className="w-full mt-3 lg:mt-0 space-y-2">
                 {uploadedFiles.map((_, index) => (
                     <UploadedLabelCard key={index} index={index} />
                 ))}
