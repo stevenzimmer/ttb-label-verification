@@ -17,7 +17,9 @@ export const CsvJsonUpload = () => {
     return (
         <div
             className={`pt-4 text-center ${
-                isDisabled ? "opacity-50" : "opacity-100"
+                isDisabled
+                    ? "opacity-50 text-gray-400"
+                    : "opacity-100 text-gray-700"
             }`}
         >
             <label
@@ -60,7 +62,7 @@ export const CsvJsonUpload = () => {
                 <div className="flex flex-col items-center gap-2">
                     <svg
                         className={`w-8 h-8 ${
-                            isDisabled ? "text-gray-400" : "text-gray-500"
+                            isDisabled ? "text-gray-400" : "text-gray-700"
                         }`}
                         fill="none"
                         stroke="currentColor"
@@ -73,7 +75,7 @@ export const CsvJsonUpload = () => {
                             d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
                         />
                     </svg>
-                    <span className="text-sm text-gray-600">
+                    <span className="text-sm">
                         Step 3. Upload application data (CSV or JSON)
                     </span>
                     <CsvJsonUploadDetails />

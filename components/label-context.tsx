@@ -67,6 +67,8 @@ export interface LabelContextValue {
     setIsDrawerOpen: React.Dispatch<React.SetStateAction<boolean>>;
     isRejectedDrawerOpen: boolean;
     setIsRejectedDrawerOpen: React.Dispatch<React.SetStateAction<boolean>>;
+    isIntroDrawerOpen: boolean;
+    setIsIntroDrawerOpen: React.Dispatch<React.SetStateAction<boolean>>;
     isPreviewDrawerOpen: boolean;
     setIsPreviewDrawerOpen: React.Dispatch<React.SetStateAction<boolean>>;
     isLoading: boolean;
@@ -151,6 +153,7 @@ export function LabelProvider({
     >([]);
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
     const [isRejectedDrawerOpen, setIsRejectedDrawerOpen] = useState(false);
+    const [isIntroDrawerOpen, setIsIntroDrawerOpen] = useState(false);
     const [isPreviewDrawerOpen, setIsPreviewDrawerOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -1064,6 +1067,8 @@ const extractTextFromLabel = async (
             setIsDrawerOpen,
             isRejectedDrawerOpen,
             setIsRejectedDrawerOpen,
+            isIntroDrawerOpen,
+            setIsIntroDrawerOpen,
             isPreviewDrawerOpen,
             setIsPreviewDrawerOpen,
             isLoading,

@@ -6,7 +6,7 @@ type DrawerProps = {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     children: React.ReactNode;
-    side?: "right" | "bottom";
+    side?: "right" | "bottom" | "left";
 };
 
 function Drawer({open, onOpenChange, children, side = "right"}: DrawerProps) {
@@ -44,14 +44,20 @@ function Drawer({open, onOpenChange, children, side = "right"}: DrawerProps) {
                     "absolute bg-card text-card-foreground shadow-xl transition-transform duration-200",
                     side === "bottom"
                         ? "inset-x-0 bottom-0 w-full max-h-[85vh] rounded-t-2xl"
-                        : "inset-y-0 right-0 w-full max-w-md",
+                        : side === "left"
+                          ? "inset-y-0 left-0 w-full max-w-md"
+                          : "inset-y-0 right-0 w-full max-w-md",
                     side === "bottom"
                         ? isVisible
                             ? "translate-y-0"
                             : "translate-y-full"
-                        : isVisible
-                          ? "translate-x-0"
-                          : "translate-x-full",
+                        : side === "left"
+                          ? isVisible
+                              ? "translate-x-0"
+                              : "-translate-x-full"
+                          : isVisible
+                            ? "translate-x-0"
+                            : "translate-x-full",
                 )}
             >
                 {children}

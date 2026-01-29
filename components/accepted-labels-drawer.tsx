@@ -7,14 +7,22 @@ import {
     DrawerHeader,
     DrawerTitle,
 } from "@/components/ui/drawer";
+import {Button} from "@/components/ui/button";
 import {useLabelContext} from "@/components/label-context";
 
 export const AcceptedLabelsDrawer = () => {
     const {isDrawerOpen, setIsDrawerOpen, savedLabels} = useLabelContext();
     return (
         <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
-            <DrawerHeader>
+            <DrawerHeader className="flex items-center justify-between">
                 <DrawerTitle>Accepted labels</DrawerTitle>
+                <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setIsDrawerOpen(false)}
+                >
+                    Close
+                </Button>
             </DrawerHeader>
             <DrawerContent>
                 {savedLabels.length === 0 ? (

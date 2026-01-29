@@ -7,6 +7,7 @@ import {
     DrawerHeader,
     DrawerTitle,
 } from "@/components/ui/drawer";
+import {Button} from "@/components/ui/button";
 import {useLabelContext} from "@/components/label-context";
 
 export const RejectedLabelsDrawer = () => {
@@ -20,8 +21,15 @@ export const RejectedLabelsDrawer = () => {
             open={isRejectedDrawerOpen}
             onOpenChange={setIsRejectedDrawerOpen}
         >
-            <DrawerHeader>
+            <DrawerHeader className="flex items-center justify-between">
                 <DrawerTitle>Rejected labels</DrawerTitle>
+                <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setIsRejectedDrawerOpen(false)}
+                >
+                    Close
+                </Button>
             </DrawerHeader>
             <DrawerContent>
                 {rejectedLabels.length === 0 ? (
