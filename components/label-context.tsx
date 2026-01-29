@@ -2,6 +2,7 @@
 
 import { createContext, ReactNode, useContext, useState, useEffect } from "react";
 import { resizeImageFile } from "@/lib/resize-image-file";
+import { useToast } from "@/components/ui/use-toast";
 
 import type {LabelExtraction} from "@/lib/label-extraction-schema";
 import type {
@@ -125,6 +126,7 @@ export function LabelProvider({
 }: {
     children: ReactNode;
 }) {
+    const { toast } = useToast();
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
 	const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
 	const [activeFileIndex, setActiveFileIndex] = useState<number>(0);
@@ -165,6 +167,14 @@ export function LabelProvider({
     const [importedApplicationErrors, setImportedApplicationErrors] = useState<
         string[]
     >([]);
+
+    const toastError = (description: string, title = "Validation error") => {
+        toast({
+            variant: "destructive",
+            title,
+            description,
+        });
+    };
 
     const parseCsvLine = (line: string) => {
         const cells: string[] = [];
@@ -406,7 +416,9 @@ export function LabelProvider({
                     `Files must be 1MB or smaller: ${oversizedList}.`,
                 );
             }
-            setError(errorMessages.length > 0 ? errorMessages.join(" ") : null);
+            if (errorMessages.length > 0) {
+                toastError(errorMessages.join(" "));
+            }
 
             if (uniqueNewFiles.length > 0) {
                 const startIndex = uploadedFiles.length;
@@ -583,8 +595,6 @@ const extractTextFromLabel = async (
             next[index] = true;
             return next;
         });
-        setError(null);
-
         try {
             const resizedFile = await resizeImageFile(file, 1200);
             const formData = new FormData();
@@ -598,7 +608,10 @@ const extractTextFromLabel = async (
             const data = await response.json();
 
             if (!response.ok) {
-                setError(data.error || "Failed to process image");
+                toastError(
+                    data.error || "Failed to process image",
+                    "Text extraction failed",
+                );
                 setParsedDataByFile((prev) => {
                     const next = [...prev];
                     next[index] = null;
@@ -614,8 +627,9 @@ const extractTextFromLabel = async (
             setParsedData(data.parsed);
             return data.parsed as LabelExtraction;
         } catch (error) {
-            setError(
+            toastError(
                 (error as Error).message || "An unexpected error occurred",
+                "Text extraction failed",
             );
             setParsedDataByFile((prev) => {
                 const next = [...prev];
@@ -638,7 +652,6 @@ const extractTextFromLabel = async (
 
     const handleSelectLabel = (index: number) => {
         setActiveFileIndex(index);
-        setError(null);
     };
 
     const handleRemoveLabelAtIndex = (index: number) => {
@@ -670,7 +683,6 @@ const extractTextFromLabel = async (
         setRejectedByFile(nextRejected);
         setRejectionReasonByFile(nextRejectionReasons);
         setShowRejectionReasonByFile(nextShowRejectionReason);
-        setError(null);
 
         if (nextFiles.length === 0) {
             setSelectedFile(null);
@@ -696,13 +708,15 @@ const extractTextFromLabel = async (
 
     const handleExtractTextFromAllLabels = async () => {
         if (uploadedFiles.length === 0) {
-            setError("Please upload at least one label first");
+            toastError(
+                "Please upload at least one label first",
+                "Action required",
+            );
             return;
         }
         const shouldRestoreActiveIndex =
             !allLabelsExtracted && Boolean(parsedDataByFile[activeFileIndex]);
         setIsLoading(true);
-        setError(null);
         setValidatingByFile(new Array(uploadedFiles.length).fill(true));
         const indices = uploadedFiles
             .map((_, index) => index)
@@ -775,7 +789,10 @@ const extractTextFromLabel = async (
         const file = uploadedFiles[index];
         const extracted = parsedDataByFile[index];
         if (!file || !extracted) {
-            setError("Please validate a label before accepting it");
+            toastError(
+                "Please validate a label before accepting it",
+                "Action required",
+            );
             return;
         }
         setSavingByFile((prev) => {
@@ -783,7 +800,6 @@ const extractTextFromLabel = async (
             next[index] = true;
             return next;
         });
-        setError(null);
         try {
             const record: SavedLabelRecord = {
                 file: {
@@ -824,9 +840,10 @@ const extractTextFromLabel = async (
                 ),
             );
         } catch (saveError) {
-            setError(
+            toastError(
                 (saveError as Error).message ||
                     "Failed to save label information",
+                "Save failed",
             );
         } finally {
             setSavingByFile((prev) => {
@@ -863,12 +880,18 @@ const extractTextFromLabel = async (
         const file = uploadedFiles[index];
         const extracted = parsedDataByFile[index];
         if (!file || !extracted) {
-            setError("Please validate a label before rejecting it");
+            toastError(
+                "Please validate a label before rejecting it",
+                "Action required",
+            );
             return;
         }
         const rejectionReason = (rejectionReasonByFile[index] ?? "").trim();
         if (!rejectionReason) {
-            setError("Please provide a reason for rejecting this label");
+            toastError(
+                "Please provide a reason for rejecting this label",
+                "Action required",
+            );
             return;
         }
         setSavingByFile((prev) => {
@@ -876,7 +899,6 @@ const extractTextFromLabel = async (
             next[index] = true;
             return next;
         });
-        setError(null);
         try {
             const record: RejectedLabelRecord = {
                 file: {
@@ -917,9 +939,10 @@ const extractTextFromLabel = async (
                 ),
             );
         } catch (saveError) {
-            setError(
+            toastError(
                 (saveError as Error).message ||
                     "Failed to reject label information",
+                "Save failed",
             );
         } finally {
             setSavingByFile((prev) => {
@@ -963,7 +986,6 @@ const extractTextFromLabel = async (
             next[index] = value;
             return next;
         });
-        setError(null);
     };
 
     const handleShowRejectionReasonAtIndex = (index: number, value: boolean) => {
@@ -976,7 +998,10 @@ const extractTextFromLabel = async (
 
     const handleLabelTextExtract = async () => {
         if (!selectedFile) {
-            setError("Please select a label to extract text from first");
+            toastError(
+                "Please select a label to extract text from first",
+                "Action required",
+            );
             return;
         }
         await extractTextFromLabel(selectedFile, activeFileIndex);
@@ -1001,7 +1026,6 @@ const extractTextFromLabel = async (
                 setSelectedFile(file);
                 setPreviewUrl(URL.createObjectURL(file));
                 setParsedData(parsedDataByFile[activeFileIndex] ?? null);
-                setError(null);
             }
         }, [activeFileIndex, parsedDataByFile, uploadedFiles]);
     return (

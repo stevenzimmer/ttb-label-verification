@@ -5,6 +5,7 @@ import {Check, ChevronRight, X} from "lucide-react";
 import {Button} from "@/components/ui/button";
 import {Card, CardContent} from "@/components/ui/card";
 import {useLabelContext} from "@/components/label-context";
+import {useToast} from "@/components/ui/use-toast";
 import {cn} from "@/lib/utils";
 import {formatFieldList} from "@/lib/format-label";
 import {buildRequirementContext} from "@/lib/label-requirements";
@@ -22,7 +23,6 @@ export function UploadedLabelCard({index}: UploadedLabelCardProps) {
         applicationDataImportedByFile,
         allLabelsExtracted,
         isLoading,
-        setError,
         handleUnacceptLabelAtIndex,
         handleRemoveLabelAtIndex,
         handleSelectLabel,
@@ -31,6 +31,7 @@ export function UploadedLabelCard({index}: UploadedLabelCardProps) {
         applicationDataByFile,
         setIsPreviewDrawerOpen,
     } = useLabelContext();
+    const {toast} = useToast();
     const file = uploadedFiles[index];
     const applicationData = applicationDataByFile[index] ?? null;
     const isApplicationDataImported = applicationDataImportedByFile[index];
@@ -85,15 +86,21 @@ export function UploadedLabelCard({index}: UploadedLabelCardProps) {
             )}
             onClick={() => {
                 if (uploadedFiles.length > 0 && !allLabelsExtracted) {
-                    setError(
-                        "Extract text from all labels before opening label details.",
-                    );
+                    toast({
+                        variant: "default",
+                        title: "Action required",
+                        description:
+                            "Extract text from all labels before opening label details.",
+                    });
                     return;
                 }
                 if (!applicationDataImportedByFile[index]) {
-                    setError(
-                        "Upload application data before opening label details.",
-                    );
+                    toast({
+                        variant: "default",
+                        title: "Action required",
+                        description:
+                            "Upload application data before opening label details.",
+                    });
                     return;
                 }
                 handleSelectLabel(index);

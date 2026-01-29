@@ -22,7 +22,6 @@ export function LabelExtractionDrawer() {
         activeFileIndex,
         isLoading,
         processingTimes,
-        error,
         isPreviewDrawerOpen,
         setIsPreviewDrawerOpen,
         applicationDataByFile,
@@ -94,12 +93,6 @@ export function LabelExtractionDrawer() {
 
                     <div className="col-span-2">
                         {isValidating && <SkeletonPanel />}
-
-                        {error && (
-                            <div className="p-4 bg-red-50 text-red-600 rounded-lg">
-                                {error}
-                            </div>
-                        )}
 
                         {currentData && !isValidating ? (
                             <FieldComparisonPanel />

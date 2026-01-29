@@ -7,8 +7,8 @@ export function LabelNav() {
     const {setIsDrawerOpen, setIsRejectedDrawerOpen} = useLabelContext();
     return (
         <nav className="w-full border-b bg-white">
-            <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-4 py-3">
-                <div className="flex items-center gap-3">
+            <div className="mx-auto md:flex w-full max-w-7xl items-center justify-between px-4 py-3">
+                <div className="flex items-center gap-3 mb-3 md:mb-0">
                     <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-900 text-xs font-semibold text-white">
                         TTB
                     </div>

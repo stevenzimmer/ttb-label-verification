@@ -13,7 +13,7 @@ export const LabelUpload = () => {
 
     return (
         <label
-            className={`block rounded-lg py-6 ${
+            className={`block rounded-lg p-6 ${
                 uploadDisabled
                     ? "cursor-not-allowed opacity-50"
                     : "opacity-100 cursor-pointer"
