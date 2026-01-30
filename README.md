@@ -1,100 +1,93 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
-
 ## Getting Started
 
-First, run the development server:
+First, create a `.env.local` file and add your OpenAI API key:
+
+```bash
+OPENAI_API_KEY=your_api_key_here
+```
+
+Then run the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Prototype choices
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+This prototype calls the OpenAI API directly using the OpenAI SDK. This keeps the build lightweight and allows rapid iteration within the one-week timebox.
 
-## Learn More
+Additional choices made to save time and infrastructure:
 
-To learn more about Next.js, take a look at the following resources:
+-   **No database or persistence**
 
--   [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
--   [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+    -   All label state, accept/reject decisions, and application data live only in client memory (React state).
+    -   Accept/reject “save” actions are simulated with a short timeout in `components/label-context.tsx`.
+    -   Avoids standing up a database, migration strategy, and the security scope that comes with long‑term storage.
+    -   Persisting label data would require image hosting, access controls, and encryption at rest/in transit for label images and derived text.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+-   **No observability/metrics pipeline**
 
-## Deploy on Vercel
+    -   The UI shows extraction timing for reviewer feedback, but there is no centralized logging, tracing, or metrics capture.
+    -   Avoids configuring log sinks, retention, alerting, or dashboards (and any compliance review for telemetry).
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+-   **No authentication/authorization**
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+    -   Prototype assumes a trusted internal user; no user management or role‑based access controls were added.
+    -   Runs as a standalone proof‑of‑concept to avoid authorization and integration work during the timebox.
 
-## README / Design Notes: Networking & Deployment Path (Suggested Text)
+-   **Simplified matching logic**
+    -   Field comparisons use exact and normalized string matching rather than richer domain rules for units, synonyms, and formatting variants. (See Future state: AI-assisted field matching endpoint for more info on next steps)
 
-### Prototype networking choice (for speed):
+## Image capture guidance
 
-This take-home prototype calls the OpenAI API directly using the OpenAI SDK. This keeps the build lightweight and allows rapid iteration within the one-week timebox.
+The extractor is resilient to imperfect photos, but it can only read what is visible. Practical expectations:
 
-### Known constraint in TTB environments:
+-   **Skew:** Mild to moderate skew is acceptable as long as all text is visible and not cut off.
+-   **Glare:** Glare is acceptable if it does not cover or wash out text. If text remains readable to a human, it is generally extractable.
+-   **Crop:** Do not crop out label edges that contain required fields; anything cut off cannot be extracted.
 
-In a locked-down government network, outbound HTTPS requests to third-party domains (e.g., public ML endpoints) may be blocked by firewall or proxy rules. If outbound traffic to the OpenAI API endpoint is restricted, AI extraction/verification will fail or time out.
+## Future state: on-prem / allow-listed inference endpoint
 
-### Production deployment approach (recommended):
+For a production deployment in TTB’s Azure environment, I would use Azure OpenAI with Private Link (Private Endpoint) and disable public network access. This keeps model traffic on private network paths, aligns better with federal security controls, and reduces reliance on public internet egress. The app would run inside a VNet and resolve the Azure OpenAI endpoint through a private DNS zone.
 
-For a production deployment in TTB’s Azure environment, I would use Azure OpenAI with Private Link (Private Endpoint) and disable public network access. This keeps model traffic on private network paths, aligns better with federal security controls, and reduces reliance on public internet egress. The app would run inside a VNet (or integrated via App Service VNet Integration) and resolve the Azure OpenAI endpoint through a private DNS zone.
+Pros:
 
-### Fallback / resilience (optional if you implement):
+-   Keeps the current OpenAI-style pipeline with minimal code changes.
+-   Higher accuracy than a pure local OCR fallback.
 
-If the AI endpoint is unreachable, the app can degrade gracefully by:
+Cons:
 
--   returning a clear “AI unavailable due to network restrictions” message, and/or
--   falling back to local OCR + rule checks for partial functionality.
+-   More infrastructure and operational work.
+-   Requires security approvals and procurement lead time.
 
-Short “Assumptions” Bullet (even more concise)
+## Future state: AI-assisted field matching endpoint
 
--   Assumption: outbound HTTPS to the OpenAI API is permitted for this prototype.
--   Future state: deploy Azure OpenAI behind Private Link with public access disabled, accessed only from within the VNet.
+To improve field matching accuracy (especially unit and formatting variants), add a dedicated API endpoint that compares extracted label fields to application data using the OpenAI SDK and returns a structured match result per field.
 
-## Requirements Coverage
+### Goal
 
-### Features that satisfy the stated requirements
+Resolve the field matching requirement between extracted label fields and application data with:
 
--   Batch uploads + batch processing
-    -   Multiple file upload via `components/image-upload.tsx`
-    -   “Extract text from all labels” with controlled concurrency and batch timing via `components/label-context.tsx:560` and surfaced in `components/label-cards.tsx`
--   Speed awareness for the ~5 second target
-    -   Per-label processing times displayed in `components/label-extraction-drawer.tsx`
-    -   Batch total + average time per label with red/green threshold feedback in `components/label-cards.tsx`
--   Clean, obvious UI for mixed tech comfort levels
-    -   Straightforward upload surface and drawer-based details in `components/label-validator-wrapper.tsx`, `components/image-upload.tsx`, and `components/label-extraction-drawer.tsx`
--   Core field extraction aligned to common TTB elements
-    -   Extraction schema includes brand, class/type, alcohol content, net contents, producer name/address, country of origin, and government warning in `lib/label-extraction-schema.ts`
-    -   System prompt enforces “visible text only,” exact excerpts as evidence, and nulls for missing fields in `lib/system-prompt.ts`
-    -   API route uses structured parsing with Zod in `app/api/validate-label/route.ts`
--   Field-by-field comparison workflow
-    -   Field comparison table with per-field status in `components/field-by-field-comparison-table.tsx`
-    -   “Judgment” matching for case/punctuation/apostrophe differences in `components/label-context.tsx:232`
--   Some conditional requirement logic (beyond naive matching)
-    -   Imported beverage requirement for country of origin and conditional ABV requirement logic in `lib/label-requirements.ts`
+-   normalization for common unit variants (e.g., `750 mL` vs `750ml`, `45% ABV` vs `45% Alc./Vol.`),
+-   a three‑state result per field: `match`, `no_match`, or `review`,
+-   and a clear rationale that can drive the Status column in the comparison table.
 
-### Gaps vs. the stated requirements and stakeholder concerns
+### Matching logic (high‑level)
 
--   Government warning exactness is under-validated
-    -   Current logic checks only for the `GOVERNMENT WARNING:` prefix rather than the full required statement and formatting nuances in `components/label-context.tsx:254` and `components/field-by-field-comparison-table.tsx`
--   No persistence, audit trail, or real save path
-    -   Accept/reject actions are simulated with a timeout and stored only in client state in `components/label-context.tsx:607` and `components/label-context.tsx:681`
--   Speed target is measured but not enforced
-    -   The UI reports timing but there is no SLA/timeout handling or fallback behavior if extraction exceeds the threshold in `components/label-cards.tsx` and `components/label-context.tsx:560`
--   Limited robustness to poor image quality
-    -   Images are resized before processing, but there is no de-skew, glare reduction, or OCR-specific preprocessing beyond resizing in `components/label-context.tsx:418`
--   Requirement logic is heuristic and may miss edge cases
-    -   Beverage type inference and requirement decisions are regex-based and approximate the real TTB rules in `lib/label-requirements.ts`
+-   Use a model prompt that:
+    -   normalizes units, punctuation, and casing,
+    -   applies domain‑specific equivalences (ABV vs Alc./Vol., mL vs ml),
+    -   returns a strict `match | no_match | review` per field,
+    -   includes short rationales for `review` or `no_match`.
+-   Keep the output schema strict (Zod schema via `responses.parse`) to ensure the UI receives consistent statuses.
+
+### UI integration plan
+
+-   When both label extraction and application data are available, call `/api/compare-fields`.
+-   Map the returned `status` directly to the Status column in the comparison table.
+-   Use `review` to highlight fields that need human judgment, even if they are likely a match after normalization.
 
 ## Future State: Evals-Driven Quality Loop
 
@@ -118,3 +111,16 @@ To move from a prototype to a reliable, regression-safe system, this app can ado
 -   Prevents silent regressions as prompts, OCR settings, or comparison logic change.
 -   Provides concrete quality targets for stakeholders and reviewers.
 -   Enables faster iteration because changes are validated automatically.
+
+## Design system choices
+
+Given the one-week timeline, the UI leans on out-of-the-box components to move quickly while keeping the interface consistent and accessible.
+
+-   **Component library**
+
+    -   Built with the shadcn/ui component patterns (see `components/ui/*`) plus Tailwind utility classes for layout and spacing.
+    -   This avoided building a bespoke design system and allowed rapid, consistent UI assembly.
+
+-   **Visual style**
+    -   Neutral palette with status colors (emerald/amber/red) to emphasize validation outcomes without heavy visual complexity.
+    -   Drawer-based detail panels keep the main workflow focused while still exposing deep review context.

@@ -47,11 +47,10 @@ export function LabelIntroDrawer() {
                     </p>
                     <ol className="list-decimal space-y-1 pl-4">
                         <li>Upload one or more label images.</li>
-                        <li>Extract text from all labels.</li>
                         <li>Import application data (CSV or JSON).</li>
+                        <li>Extract text from all labels.</li>
                         <li>
-                            Review each label, then accept or reject with
-                            notes.
+                            Review each label, then accept or reject with notes.
                         </li>
                     </ol>
                 </div>

@@ -11,10 +11,10 @@ export const LabelValidationSteps = () => {
         Boolean,
     );
     const currentStep =
-        uploadedFiles.length === 0 ? 1 : allLabelsExtracted ? 3 : 2;
+        uploadedFiles.length === 0 ? 1 : !hasImportedApplicationData ? 2 : 3;
     const step1Complete = uploadedFiles.length > 0;
-    const step2Complete = allLabelsExtracted;
-    const step3Complete = hasImportedApplicationData;
+    const step2Complete = hasImportedApplicationData;
+    const step3Complete = hasImportedApplicationData && allLabelsExtracted;
     return (
         <ol className="mx-auto mb-6 space-y-2 text-gray-600">
             <li className="flex items-center gap-2">
@@ -52,8 +52,7 @@ export const LabelValidationSteps = () => {
                     </span>
                 </div>
                 <p className={currentStep < 2 ? "text-gray-300" : ""}>
-                    Verify the correct labels are uploaded and then click{" "}
-                    <strong>Extract text from all labels</strong> button
+                    Upload application data (CSV/JSON)
                 </p>
             </li>
             <li className="flex items-center gap-2">
@@ -62,7 +61,7 @@ export const LabelValidationSteps = () => {
                         className={`inline-flex h-6 w-6 items-center justify-center rounded-full border text-xs font-semibold ${
                             step3Complete || currentStep === 3
                                 ? "border-emerald-300 bg-emerald-50 text-emerald-700"
-                                : allLabelsExtracted
+                                : hasImportedApplicationData
                                 ? "border-emerald-300 text-emerald-700"
                                 : "border-gray-300 text-gray-400"
                         }`}
@@ -75,7 +74,7 @@ export const LabelValidationSteps = () => {
                     </span>
                 </div>
                 <p className={currentStep < 3 ? "text-gray-300" : ""}>
-                    Upload application data (CSV/JSON)
+                    Compare label text with application data
                 </p>
             </li>
         </ol>

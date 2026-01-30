@@ -164,7 +164,7 @@ export function UploadedLabelCard({index}: UploadedLabelCardProps) {
 
                                 {labelCardIsReady && (
                                     <div className="mt-1 flex items-center justify-end gap-1 text-xs font-medium text-muted-foreground">
-                                        <span>View details</span>
+                                        <span>View comparison</span>
                                         <ChevronRight className="h-3.5 w-3.5" />
                                     </div>
                                 )}

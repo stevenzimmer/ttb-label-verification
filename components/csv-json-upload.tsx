@@ -8,12 +8,16 @@ export const CsvJsonUpload = () => {
         allLabelsExtracted,
         uploadedFiles,
         applicationDataImportedByFile,
+        applicationDataFileName,
+        isLoading,
     } = useLabelContext();
     const hasImportedApplicationData = applicationDataImportedByFile.some(
         Boolean,
     );
     const appDataInputRef = useRef<HTMLInputElement | null>(null);
-    const isDisabled = !allLabelsExtracted || hasImportedApplicationData;
+
+    const hasLabels = uploadedFiles.length > 0;
+    const isDisabled = !hasLabels || hasImportedApplicationData || isLoading;
     return (
         <div
             className={`pt-4 text-center ${
@@ -29,20 +33,17 @@ export const CsvJsonUpload = () => {
                         : "opacity-100 cursor-pointer bg-emerald-50"
                 }`}
                 onClick={() => {
-                    if (allLabelsExtracted && !hasImportedApplicationData) {
-                        return;
-                    }
                     if (hasImportedApplicationData) {
                         setImportedApplicationErrors([
                             "Application data has already been uploaded.",
                         ]);
                         return;
                     }
-                    const message =
-                        uploadedFiles.length === 0
-                            ? "Upload label images before importing application data."
-                            : "Extract label text before importing application data.";
-                    setImportedApplicationErrors([message]);
+                    if (!hasLabels) {
+                        setImportedApplicationErrors([
+                            "Upload label images before importing application data.",
+                        ]);
+                    }
                 }}
             >
                 <input
@@ -57,7 +58,7 @@ export const CsvJsonUpload = () => {
                         event.currentTarget.value = "";
                     }}
                     ref={appDataInputRef}
-                    disabled={!allLabelsExtracted || hasImportedApplicationData}
+                    disabled={isDisabled}
                 />
                 <div className="flex flex-col items-center gap-2">
                     <svg
@@ -76,23 +77,21 @@ export const CsvJsonUpload = () => {
                         />
                     </svg>
                     <span className="text-sm">
-                        Step 3. Upload application data (CSV or JSON)
+                        Step 2. Upload application data (CSV or JSON)
                     </span>
                     <CsvJsonUploadDetails />
                     {hasImportedApplicationData && (
-                        <span className="text-xs text-gray-400">
-                            Application data uploaded.
+                        <span className="text-sm text-gray-800 block bg-slate-100 p-3">
+                            Application data uploaded
+                            {applicationDataFileName
+                                ? `: ${applicationDataFileName}`
+                                : "."}
                         </span>
                     )}
-                    {!allLabelsExtracted && uploadedFiles.length > 0 && (
+                    {!hasLabels && (
                         <span className="text-xs text-gray-400 ">
-                            Complete text extraction first to unlock application
-                            upload.
-                        </span>
-                    )}
-                    {!allLabelsExtracted && uploadedFiles.length === 0 && (
-                        <span className="text-xs text-gray-400 ">
-                            Upload labels first to begin extraction.
+                            Upload labels first to enable application data
+                            import.
                         </span>
                     )}
                 </div>

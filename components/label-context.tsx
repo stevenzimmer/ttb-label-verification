@@ -49,6 +49,8 @@ export interface LabelContextValue {
     setApplicationDataByFile: React.Dispatch<React.SetStateAction<ApplicationData[]>>;
     applicationDataImportedByFile: boolean[];
     setApplicationDataImportedByFile: React.Dispatch<React.SetStateAction<boolean[]>>;
+    applicationDataFileName: string | null;
+    setApplicationDataFileName: React.Dispatch<React.SetStateAction<string | null>>;
     validatingByFile: boolean[];
     setValidatingByFile: React.Dispatch<React.SetStateAction<boolean[]>>;
     savingByFile: boolean[];
@@ -140,6 +142,9 @@ export function LabelProvider({
     const [applicationDataByFile, setApplicationDataByFile] = useState<
         ApplicationData[]
     >([]);
+    const [applicationDataFileName, setApplicationDataFileName] = useState<
+        string | null
+    >(null);
     const [validatingByFile, setValidatingByFile] = useState<boolean[]>([]);
     const [savingByFile, setSavingByFile] = useState<boolean[]>([]);
     const [acceptedByFile, setAcceptedByFile] = useState<boolean[]>([]);
@@ -565,6 +570,7 @@ export function LabelProvider({
         setApplicationDataByFile(nextApplicationData);
         setApplicationDataImportedByFile(nextImportedFlags);
         setImportedApplicationErrors(errors);
+        setApplicationDataFileName(file.name);
     };
 
     const addProcessingTime = (
@@ -745,7 +751,7 @@ const extractTextFromLabel = async (
                 });
             }
         });
-        const concurrency = uploadedFiles.length;
+        const concurrency = 200; // batches of 200 labels processed at a time.
         const groups: number[][] = [];
         for (let i = 0; i < indices.length; i += concurrency) {
             groups.push(indices.slice(i, i + concurrency));
@@ -1049,6 +1055,8 @@ const extractTextFromLabel = async (
             setApplicationDataByFile,
             applicationDataImportedByFile,
             setApplicationDataImportedByFile,
+            applicationDataFileName,
+            setApplicationDataFileName,
             validatingByFile,
             setValidatingByFile,
             savingByFile,
