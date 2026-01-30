@@ -66,6 +66,17 @@
         "gov_warning": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems."
     },
     {
+        "file_name": "rustwood-vineyards-skewed-w-glare.jpg",
+        "brand_name": "Rustwood Vineyards",
+        "class_type_designation": "Cabernet Sauvignon",
+        "alcohol_content": "Alc. 14.5% by vol.",
+        "net_contents": "750 ml",
+        "producer_name": "Rustwood Vineyards",
+        "producer_address": "St. Helena, CA",
+        "country_of_origin": "USA",
+        "gov_warning": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems."
+    },
+    {
         "file_name": "cantina-bellavista.jpg",
         "brand_name": "Cantina Bellavista",
         "class_type_designation": "Brunello di Montalcino",

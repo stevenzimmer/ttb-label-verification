@@ -1,3 +1,18 @@
+## Overview
+
+This prototype is an AI-powered workspace for verifying alcohol label applications. Reviewers upload label images, import application data, and run text extraction to compare required fields with clear match/review/issue statuses. It is designed to be fast, low-friction, and usable by agents with varying technical comfort.
+
+## Description
+
+The app supports batch label uploads, CSV/JSON application data imports, and automated text extraction via the OpenAI Responses API. Comparison logic highlights required fields (based on inferred beverage type and import status) and enforces strict handling of the government warning. Reviewers can accept or reject labels with a required rejection reason for auditability.
+
+## Workflow
+
+1. Upload one or more label images (JPEG/PNG, max 1MB each).
+2. Import application data using CSV or JSON (mapped by `file_name` or row order).
+3. Run text extraction and compare label fields to application values.
+4. Review the comparison table, then accept or reject with notes.
+
 ## Getting Started
 
 First, create a `.env.local` file and add your OpenAI API key:
