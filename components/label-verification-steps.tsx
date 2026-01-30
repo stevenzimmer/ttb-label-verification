@@ -52,7 +52,7 @@ export const LabelValidationSteps = () => {
                     </span>
                 </div>
                 <p className={currentStep < 2 ? "text-gray-300" : ""}>
-                    Upload application data (CSV/JSON)
+                    Import application data (CSV/JSON)
                 </p>
             </li>
             <li className="flex items-center gap-2">

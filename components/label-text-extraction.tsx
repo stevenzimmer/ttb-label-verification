@@ -25,7 +25,7 @@ export const LabelTextExtraction = () => {
                     : "opacity-50 text-gray-400"
             }`}
         >
-            <div className="mb-3 text-sm">
+            <div className="mb-3 text-base font-semibold">
                 Step 3. Extract text from label text to compare with application
                 data
             </div>
@@ -49,7 +49,7 @@ export const LabelTextExtraction = () => {
             )}
             {hasLabels && !hasImportedApplicationData && (
                 <div className="mt-2 text-xs">
-                    Upload application data (step 2) to enable comparison.
+                    Import application data (step 2) to enable comparison.
                 </div>
             )}
             {step3Complete && (

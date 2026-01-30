@@ -6,9 +6,10 @@ First, create a `.env.local` file and add your OpenAI API key:
 OPENAI_API_KEY=your_api_key_here
 ```
 
-Then run the development server:
+Install packages and then run the development server:
 
 ```bash
+npm install
 npm run dev
 ```
 
@@ -16,9 +17,9 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 ## Prototype choices
 
-This prototype calls the OpenAI API directly using the OpenAI SDK. This keeps the build lightweight and allows rapid iteration within the one-week timebox.
+-   **Direct OpenAI SDK usage**
 
-Additional choices made to save time and infrastructure:
+    -   This prototype calls the OpenAI API directly using the OpenAI SDK. This keeps the build lightweight and allows rapid iteration within the one-week timebox. (Future state: on-prem / allow-listed inference endpoint for more info)
 
 -   **No database or persistence**
 
@@ -38,7 +39,7 @@ Additional choices made to save time and infrastructure:
     -   Runs as a standalone proof‑of‑concept to avoid authorization and integration work during the timebox.
 
 -   **Simplified matching logic**
-    -   Field comparisons use exact and normalized string matching rather than richer domain rules for units, synonyms, and formatting variants. (See Future state: AI-assisted field matching endpoint for more info on next steps)
+    -   Field comparisons use exact and normalized string matching rather than richer domain rules for units, synonyms, and formatting variants. (See Future state: AI-assisted field matching endpoint for more info)
 
 ## Image capture guidance
 
@@ -83,12 +84,6 @@ Resolve the field matching requirement between extracted label fields and applic
     -   includes short rationales for `review` or `no_match`.
 -   Keep the output schema strict (Zod schema via `responses.parse`) to ensure the UI receives consistent statuses.
 
-### UI integration plan
-
--   When both label extraction and application data are available, call `/api/compare-fields`.
--   Map the returned `status` directly to the Status column in the comparison table.
--   Use `review` to highlight fields that need human judgment, even if they are likely a match after normalization.
-
 ## Future State: Evals-Driven Quality Loop
 
 To move from a prototype to a reliable, regression-safe system, this app can adopt a lightweight evals program that measures extraction and comparison quality over a curated gold dataset.
@@ -108,7 +103,7 @@ To move from a prototype to a reliable, regression-safe system, this app can ado
 
 ### Why this matters
 
--   Prevents silent regressions as prompts, OCR settings, or comparison logic change.
+-   Prevents silent regressions as prompts or comparison logic change.
 -   Provides concrete quality targets for stakeholders and reviewers.
 -   Enables faster iteration because changes are validated automatically.
 

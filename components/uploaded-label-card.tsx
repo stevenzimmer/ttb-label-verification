@@ -98,7 +98,7 @@ export function UploadedLabelCard({index}: UploadedLabelCardProps) {
                         variant: "default",
                         title: "Action required",
                         description:
-                            "Upload application data before opening label details.",
+                            "Import application data before opening label details.",
                     });
                     return;
                 }
