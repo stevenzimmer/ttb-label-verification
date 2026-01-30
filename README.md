@@ -15,6 +15,8 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
+The prototype can be demoed at `ttb.webdevzim.com`.
+
 ## Prototype choices
 
 -   **Direct OpenAI SDK usage**
