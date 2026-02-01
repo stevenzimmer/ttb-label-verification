@@ -5,7 +5,13 @@ import {
     LabelExtractionSchema,
     normalizeLabelExtraction,
 } from "@/lib/label-extraction-schema";
-import {systemPrompt} from "@/lib/system-prompt";
+import {
+    LabelComparisonSchema,
+    LabelExtractionWithComparisonSchema,
+    normalizeLabelComparisons,
+} from "@/lib/label-match-schema";
+import {extractionWithMatchingSystemPrompt} from "@/lib/system-prompt";
+import type {ApplicationData} from "@/lib/label-types";
 
 const client = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
@@ -14,9 +20,22 @@ const client = new OpenAI({
 export async function POST(request: NextRequest) {
     const formData = await request.formData();
     const file = formData.get("file") as File;
+    const applicationDataRaw = formData.get("application_data");
 
     if (!file) {
         return NextResponse.json({error: "No file provided"}, {status: 400});
+    }
+
+    let applicationData: ApplicationData | null = null;
+    if (typeof applicationDataRaw === "string" && applicationDataRaw.trim()) {
+        try {
+            applicationData = JSON.parse(applicationDataRaw) as ApplicationData;
+        } catch (error) {
+            return NextResponse.json(
+                {error: "Invalid application data JSON"},
+                {status: 400},
+            );
+        }
     }
     // Convert file to base64
     const bytes = await file.arrayBuffer();
@@ -33,7 +52,7 @@ export async function POST(request: NextRequest) {
             input: [
                 {
                     role: "system",
-                    content: systemPrompt,
+                    content: extractionWithMatchingSystemPrompt,
                 },
                 {
                     role: "user",
@@ -43,13 +62,19 @@ export async function POST(request: NextRequest) {
                             image_url: base64Url,
                             detail: "auto",
                         },
+                        {
+                            type: "input_text",
+                            text: `Application data JSON:\n${JSON.stringify(
+                                applicationData ?? {},
+                            )}`,
+                        },
                     ],
                 },
             ],
             text: {
                 format: zodTextFormat(
-                    LabelExtractionSchema,
-                    "label_extraction",
+                    LabelExtractionWithComparisonSchema,
+                    "label_extraction_with_matching",
                 ),
             },
         });
@@ -65,12 +90,20 @@ export async function POST(request: NextRequest) {
             );
         }
         const raw = JSON.parse(text) as Record<string, unknown>;
+        const parsedOutput = LabelExtractionWithComparisonSchema.parse(raw);
         const withDefaults = normalizeLabelExtraction(
-            raw as Partial<ReturnType<typeof normalizeLabelExtraction>>,
+            parsedOutput.extracted as Partial<
+                ReturnType<typeof normalizeLabelExtraction>
+            >,
         );
-        const parsed = LabelExtractionSchema.parse(withDefaults);
+        const comparisonDefaults = normalizeLabelComparisons(
+            parsedOutput.comparisons as Partial<
+                ReturnType<typeof normalizeLabelComparisons>
+            >,
+        );
+        const extractedParsed = LabelExtractionSchema.parse(withDefaults);
         const normalized = Object.fromEntries(
-            Object.entries(parsed).map(([key, field]) => {
+            Object.entries(extractedParsed).map(([key, field]) => {
                 const value =
                     typeof field.value === "string" && field.value.trim() === ""
                         ? null
@@ -85,8 +118,14 @@ export async function POST(request: NextRequest) {
                 return [key, {...field, value, evidence, confidence}];
             }),
         );
+        const comparisonParsed = LabelComparisonSchema.parse(
+            comparisonDefaults,
+        );
 
-        return NextResponse.json({parsed: normalized}, {status: 200});
+        return NextResponse.json(
+            {parsed: normalized, comparisons: comparisonParsed},
+            {status: 200},
+        );
     } catch (err) {
         return NextResponse.json(
             {error: (err as Error).message || "Error processing image"},

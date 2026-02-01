@@ -113,11 +113,12 @@ export interface LabelContextValue {
         matched: number;
         total: number;
         reviewFields: string[];
-        issueFields: string[];
+        noMatchFields: string[];
     } | null;
     getLabelMatchSummary: (
         data: LabelExtraction | null,
         applicationData: ApplicationData | null,
+        comparisons?: Record<string, LabelFieldComparison> | null,
     ) => LabelMatchSummary | null;
 }
 
@@ -153,6 +154,12 @@ export function LabelProvider({
     const [rejectionReasonByFile, setRejectionReasonByFile] = useState<string[]>([]);
     const [showRejectionReasonByFile, setShowRejectionReasonByFile] = useState<boolean[]>([]);
     const [applicationDataImportedByFile, setApplicationDataImportedByFile] = useState<boolean[]>([]);
+    const [comparisonResultsByFile, setComparisonResultsByFile] = useState<
+        Array<Record<string, {status: ComparisonStatus; rationale: string | null}> | null>
+    >([]);
+    const [comparisonApplicationDataByFile, setComparisonApplicationDataByFile] = useState<
+        Array<ApplicationData | null>
+    >([]);
     const [rejectedLabels, setRejectedLabels] = useState<
         RejectedLabelRecord[]
     >([]);
@@ -226,10 +233,106 @@ export function LabelProvider({
         });
     };
 
+    const normalizeText = (value: string) =>
+        value
+            .toLowerCase()
+            .replace(/['’]/g, "")
+            .replace(/[^a-z0-9]+/g, " ")
+            .replace(/\s+/g, " ")
+            .trim();
+
+    const areApplicationDataEqual = (
+        left: ApplicationData | null,
+        right: ApplicationData | null,
+    ) => {
+        if (!left || !right) {
+            return false;
+        }
+        return (
+            left.brand_name === right.brand_name &&
+            left.class_type_designation === right.class_type_designation &&
+            left.alcohol_content === right.alcohol_content &&
+            left.net_contents === right.net_contents &&
+            left.producer_name === right.producer_name &&
+            left.producer_address === right.producer_address &&
+            left.country_of_origin === right.country_of_origin &&
+            left.gov_warning === right.gov_warning
+        );
+    };
+
+    const buildComparisonsFromModel = (
+        labelData: LabelExtraction,
+        applicationData: ApplicationData,
+        modelComparisons: Record<
+            string,
+            {status: ComparisonStatus; rationale: string | null}
+        >,
+    ) => {
+        const comparisons: Record<string, LabelFieldComparison> = {};
+        const context = buildRequirementContext(labelData);
+        const requirements = getFieldRequirements(context);
+
+        (Object.entries(labelData) as Array<
+            [keyof ApplicationData, LabelExtraction[keyof LabelExtraction]]
+        >).forEach(([key, field]) => {
+            const requirement = requirements[key];
+            const labelValue =
+                typeof field.value === "string" ? field.value.trim() : "";
+            const applicationValue =
+                typeof applicationData[key as keyof ApplicationData] ===
+                "string"
+                    ? applicationData[
+                          key as keyof ApplicationData
+                      ].trim()
+                    : "";
+            const modelResult = modelComparisons[key as string];
+            const status = modelResult?.status ?? "review";
+            const rationale =
+                status === "match"
+                    ? null
+                    : modelResult?.rationale?.trim() ||
+                      "Insufficient information to confirm a match.";
+            comparisons[key] = {
+                labelValue: field.value,
+                applicationValue,
+                status,
+                rationale,
+                required: requirement.required,
+                requirementReason: requirement.reason,
+            };
+        });
+        return comparisons;
+    };
+
     const getLabelMatchSummary = (
         data: LabelExtraction | null,
         applicationData: ApplicationData | null,
+        comparisons?: Record<string, LabelFieldComparison> | null,
     ): LabelMatchSummary | null => {
+        if (comparisons) {
+            const entries = Object.entries(comparisons);
+            const requiredEntries = entries.filter(
+                ([, comparison]) => comparison.required,
+            );
+            const total = requiredEntries.length;
+            const matched = requiredEntries.filter(
+                ([, comparison]) => comparison.status === "match",
+            ).length;
+            const reviewFields = requiredEntries
+                .filter(([, comparison]) => comparison.status === "review")
+                .map(([key]) => key);
+            const noMatchFields = requiredEntries
+                .filter(([, comparison]) => comparison.status === "no_match")
+                .map(([key]) => key);
+            return {
+                matched,
+                total,
+                allMatched: matched === total,
+                reviewFields,
+                noMatchFields,
+            };
+        }
+
         if (!data) {
             return null;
         }
@@ -242,7 +345,7 @@ export function LabelProvider({
             const total = entries.length;
             const matchedFields: string[] = [];
             const reviewFields: string[] = [];
-            const issueFields: string[] = [];
+            const noMatchFields: string[] = [];
 
             entries.forEach(([key, field]) => {
                 if (field.confidence > 0.7) {
@@ -250,7 +353,7 @@ export function LabelProvider({
                 } else if (field.confidence > 0.4) {
                     reviewFields.push(key);
                 } else {
-                    issueFields.push(key);
+                    noMatchFields.push(key);
                 }
             });
 
@@ -260,7 +363,7 @@ export function LabelProvider({
                 total,
                 allMatched: matched === total,
                 reviewFields,
-                issueFields,
+                noMatchFields,
             };
         }
 
@@ -273,7 +376,7 @@ export function LabelProvider({
 
         const matchedFields: string[] = [];
         const reviewFields: string[] = [];
-        const issueFields: string[] = [];
+        const noMatchFields: string[] = [];
 
         requiredKeys.forEach((key) => {
             const field = data[key];
@@ -285,7 +388,7 @@ export function LabelProvider({
             } else if (hasValue && field.confidence > 0.4) {
                 reviewFields.push(key);
             } else {
-                issueFields.push(key);
+                noMatchFields.push(key);
             }
         });
 
@@ -296,7 +399,7 @@ export function LabelProvider({
             total,
             allMatched: matched === total,
             reviewFields,
-            issueFields,
+            noMatchFields,
         };
     };
 
@@ -307,15 +410,21 @@ export function LabelProvider({
         if (!labelData || !applicationData) {
             return null;
         }
-        const normalizeText = (value: string) =>
-            value
-                .toLowerCase()
-                .replace(/['’]/g, "")
-                .replace(/[^a-z0-9]+/g, " ")
-                .replace(/\s+/g, " ")
-                .trim();
+        const modelComparisons = comparisonResultsByFile[activeFileIndex];
+        const comparisonSnapshot = comparisonApplicationDataByFile[activeFileIndex];
+        const shouldUseModel =
+            Boolean(modelComparisons) &&
+            areApplicationDataEqual(comparisonSnapshot, applicationData);
+        if (modelComparisons && shouldUseModel) {
+            return buildComparisonsFromModel(
+                labelData,
+                applicationData,
+                modelComparisons,
+            );
+        }
+
         const comparisons: Record<string, LabelFieldComparison> = {};
-        const context = buildRequirementContext( labelData);
+        const context = buildRequirementContext(labelData);
         const requirements = getFieldRequirements(context);
 
         (Object.entries(labelData) as Array<
@@ -333,17 +442,22 @@ export function LabelProvider({
                     : "";
             const hasLabel = labelValue.length > 0;
             const hasApplication = applicationValue.length > 0;
-            let status: ComparisonStatus = "issue";
+            let status: ComparisonStatus = "no_match";
+            let rationale: string | null = null;
 
             if (key === "gov_warning") {
                 const hasAllCapsWarning = labelValue.includes(
                     "GOVERNMENT WARNING:",
                 );
-                status = hasAllCapsWarning ? "match" : "issue";
-            } else if (requirement.required && (!hasLabel || !hasApplication)) {
-                status = "issue";
+                status = hasAllCapsWarning ? "match" : "no_match";
+                if (status !== "match") {
+                    rationale = "Government warning statement not found on label.";
+                }
             } else if (!hasLabel || !hasApplication) {
-                status = "review";
+                status = requirement.required ? "no_match" : "review";
+                rationale = requirement.required
+                    ? "Required value missing in the label or application data."
+                    : "Insufficient information to confirm a match.";
             } else if (labelValue === applicationValue) {
                 status = "match";
             } else if (
@@ -351,11 +465,15 @@ export function LabelProvider({
             ) {
                 // "Judgment" match: case/punctuation/apostrophe-insensitive.
                 status = "match";
+            } else {
+                status = "no_match";
+                rationale = "Normalized values do not match.";
             }
             comparisons[key] = {
                 labelValue: field.value,
                 applicationValue,
                 status,
+                rationale: status === "match" ? null : rationale,
                 required: requirement.required,
                 requirementReason: requirement.reason,
             };
@@ -378,14 +496,14 @@ export function LabelProvider({
         const reviewFields = requiredEntries
             .filter(([, comparison]) => comparison.status === "review")
             .map(([key]) => key);
-        const issueFields = requiredEntries
-            .filter(([, comparison]) => comparison.status === "issue")
+        const noMatchFields = requiredEntries
+            .filter(([, comparison]) => comparison.status === "no_match")
             .map(([key]) => key);
         return {
             matched,
             total,
             reviewFields,
-            issueFields,
+            noMatchFields,
         };
     };
 
@@ -444,6 +562,14 @@ export function LabelProvider({
                 setApplicationDataImportedByFile((prev) => [
                     ...prev,
                     ...new Array(uniqueNewFiles.length).fill(false),
+                ]);
+                setComparisonResultsByFile((prev) => [
+                    ...prev,
+                    ...new Array(uniqueNewFiles.length).fill(null),
+                ]);
+                setComparisonApplicationDataByFile((prev) => [
+                    ...prev,
+                    ...new Array(uniqueNewFiles.length).fill(null),
                 ]);
                 setValidatingByFile((prev) => [
                     ...prev,
@@ -607,7 +733,12 @@ const extractTextFromLabel = async (
         try {
             const resizedFile = await resizeImageFile(file, 1200);
             const formData = new FormData();
+            const applicationData = applicationDataByFile[index] ?? null;
             formData.append("file", resizedFile);
+            formData.append(
+                "application_data",
+                JSON.stringify(applicationData ?? {}),
+            );
 
             const response = await fetch("/api/validate-label", {
                 method: "POST",
@@ -626,11 +757,31 @@ const extractTextFromLabel = async (
                     next[index] = null;
                     return next;
                 });
+                setComparisonResultsByFile((prev) => {
+                    const next = [...prev];
+                    next[index] = null;
+                    return next;
+                });
+                setComparisonApplicationDataByFile((prev) => {
+                    const next = [...prev];
+                    next[index] = null;
+                    return next;
+                });
                 return null;
             }
             setParsedDataByFile((prev) => {
                 const next = [...prev];
                 next[index] = data.parsed;
+                return next;
+            });
+            setComparisonResultsByFile((prev) => {
+                const next = [...prev];
+                next[index] = data.comparisons ?? null;
+                return next;
+            });
+            setComparisonApplicationDataByFile((prev) => {
+                const next = [...prev];
+                next[index] = applicationData;
                 return next;
             });
             setParsedData(data.parsed);
@@ -641,6 +792,16 @@ const extractTextFromLabel = async (
                 "Text extraction failed",
             );
             setParsedDataByFile((prev) => {
+                const next = [...prev];
+                next[index] = null;
+                return next;
+            });
+            setComparisonResultsByFile((prev) => {
+                const next = [...prev];
+                next[index] = null;
+                return next;
+            });
+            setComparisonApplicationDataByFile((prev) => {
                 const next = [...prev];
                 next[index] = null;
                 return next;
@@ -672,6 +833,12 @@ const extractTextFromLabel = async (
         const nextApplicationDataImported = applicationDataImportedByFile.filter(
             (_, i) => i !== index,
         );
+        const nextComparisonResults = comparisonResultsByFile.filter(
+            (_, i) => i !== index,
+        );
+        const nextComparisonApplicationData = comparisonApplicationDataByFile.filter(
+            (_, i) => i !== index,
+        );
         const nextValidating = validatingByFile.filter((_, i) => i !== index);
         const nextSaving = savingByFile.filter((_, i) => i !== index);
         const nextAccepted = acceptedByFile.filter((_, i) => i !== index);
@@ -686,6 +853,8 @@ const extractTextFromLabel = async (
         setParsedDataByFile(nextParsed);
         setApplicationDataByFile(nextApplicationData);
         setApplicationDataImportedByFile(nextApplicationDataImported);
+        setComparisonResultsByFile(nextComparisonResults);
+        setComparisonApplicationDataByFile(nextComparisonApplicationData);
         setValidatingByFile(nextValidating);
         setSavingByFile(nextSaving);
         setAcceptedByFile(nextAccepted);

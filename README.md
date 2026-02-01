@@ -1,10 +1,10 @@
 ## Overview
 
-This prototype is an AI-powered workspace for verifying alcohol label applications. Reviewers upload label images, import application data, and run text extraction to compare required fields with clear match/review/issue statuses. It is designed to be fast, low-friction, and usable by agents with varying technical comfort.
+This prototype is an AI-powered workspace for verifying alcohol label applications. Reviewers upload label images, import application data, and run text extraction to compare required fields with clear match/review/no_match statuses. It is designed to be fast, low-friction, and usable by agents with varying technical comfort.
 
 ## Description
 
-The app supports batch label uploads, CSV/JSON application data imports, and automated text extraction via the OpenAI Responses API. Comparison logic highlights required fields (based on inferred beverage type and import status) and enforces strict handling of the government warning. Reviewers can accept or reject labels with a required rejection reason for auditability.
+The app supports batch label uploads, CSV/JSON application data imports, and automated text extraction with AI-assisted matching via the OpenAI Responses API. Comparison logic highlights required fields (based on inferred beverage type and import status) and enforces strict handling of the government warning. Reviewers can accept or reject labels with a required rejection reason for auditability.
 
 ## Workflow
 
@@ -55,8 +55,8 @@ The prototype can be demoed at `ttb.webdevzim.com`.
     -   Prototype assumes a trusted internal user; no user management or role‑based access controls were added.
     -   Runs as a standalone proof‑of‑concept to avoid authorization and integration work during the timebox.
 
--   **Simplified matching logic**
-    -   Field comparisons use exact and normalized string matching rather than richer domain rules for units, synonyms, and formatting variants. (See Future state: AI-assisted field matching endpoint for more info)
+-   **AI-assisted matching logic**
+    -   Field comparisons are returned by the model alongside extraction, including normalization for unit variants and domain-specific equivalences. Results are strict `match | no_match | review` with rationales for non-matches/reviews.
 
 ## Image capture guidance
 
@@ -79,27 +79,6 @@ Cons:
 
 -   More infrastructure and operational work.
 -   Requires security approvals and procurement lead time.
-
-## Future state: AI-assisted field matching endpoint
-
-To improve field matching accuracy (especially unit and formatting variants), add a dedicated API endpoint that compares extracted label fields to application data using the OpenAI SDK and returns a structured match result per field.
-
-### Goal
-
-Resolve the field matching requirement between extracted label fields and application data with:
-
--   normalization for common unit variants (e.g., `750 mL` vs `750ml`, `45% ABV` vs `45% Alc./Vol.`),
--   a three‑state result per field: `match`, `no_match`, or `review`,
--   and a clear rationale that can drive the Status column in the comparison table.
-
-### Matching logic (high‑level)
-
--   Use a model prompt that:
-    -   normalizes units, punctuation, and casing,
-    -   applies domain‑specific equivalences (ABV vs Alc./Vol., mL vs ml),
-    -   returns a strict `match | no_match | review` per field,
-    -   includes short rationales for `review` or `no_match`.
--   Keep the output schema strict (Zod schema via `responses.parse`) to ensure the UI receives consistent statuses.
 
 ## Future State: Evals-Driven Quality Loop
 

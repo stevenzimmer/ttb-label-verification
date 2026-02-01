@@ -26,6 +26,7 @@ export function UploadedLabelCard({index}: UploadedLabelCardProps) {
         handleRemoveLabelAtIndex,
         handleSelectLabel,
         getLabelMatchSummary,
+        compareLabelToApplication,
         parsedDataByFile,
         applicationDataByFile,
         setIsPreviewDrawerOpen,
@@ -34,21 +35,13 @@ export function UploadedLabelCard({index}: UploadedLabelCardProps) {
     const file = uploadedFiles[index];
     const applicationData = applicationDataByFile[index] ?? null;
     const isApplicationDataImported = applicationDataImportedByFile[index];
-    const applicationFieldCount = applicationData
-        ? Object.values(applicationData).filter((value) => value.trim() !== "")
-              .length
-        : 0;
     const labelData = parsedDataByFile[index] ?? null;
-    const summary = getLabelMatchSummary(labelData, applicationData);
-    const extractedFieldCount = labelData
-        ? Object.values(labelData).filter((field) => {
-              if (typeof field.value === "string") {
-                  return field.value.trim() !== "";
-              }
-              return Boolean(field.value);
-          }).length
-        : 0;
-    const totalFieldCount = labelData ? Object.keys(labelData).length : 0;
+    const comparisons = compareLabelToApplication(labelData, applicationData);
+    const summary = getLabelMatchSummary(
+        labelData,
+        applicationData,
+        comparisons,
+    );
 
     const validating = validatingByFile[index];
     const accepted = acceptedByFile[index];
@@ -75,13 +68,19 @@ export function UploadedLabelCard({index}: UploadedLabelCardProps) {
     }
 
     const labelCardIsReady = extractionComplete && isApplicationDataImported;
+    const hasAllMatches =
+        summary && summary.total > 0 && summary.matched === summary.total;
+    const hasIssues =
+        summary &&
+        (summary.noMatchFields.length > 0 || summary.reviewFields.length > 0);
 
     return (
         <Card
             className={cn(
                 "transition-colors cursor-pointer",
                 isActive ? "border-blue-500 bg-secondary" : "hover:bg-muted/60",
-                labelCardIsReady && "bg-emerald-50 hover:bg-emerald-100",
+                labelCardIsReady && hasAllMatches && "bg-emerald-50 hover:bg-emerald-100",
+                labelCardIsReady && !hasAllMatches && hasIssues && "bg-amber-50 hover:bg-amber-100",
             )}
             onClick={() => {
                 if (uploadedFiles.length > 0 && !allLabelsExtracted) {
@@ -89,7 +88,7 @@ export function UploadedLabelCard({index}: UploadedLabelCardProps) {
                         variant: "default",
                         title: "Action required",
                         description:
-                            "Extract text from all labels before opening label details.",
+                            "Extract all label text before opening label details.",
                     });
                     return;
                 }
@@ -141,26 +140,22 @@ export function UploadedLabelCard({index}: UploadedLabelCardProps) {
                         </div>
                     )}
                 </div>
-                <div className="">
+                <div className="text-right">
                     {validating ? (
                         <div className="text-center py-4">
                             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
                             <span className="text-xs text-gray-900">
-                                Extraction in progress...
+                                Running comparison...
                             </span>
                         </div>
                     ) : (
                         summary && (
                             <>
-                                <div className="text-xs font-semibold space-y-1 text-right max-w-50 text-emerald-700">
-                                    <div>{`${extractedFieldCount}/${totalFieldCount} fields extracted`}</div>
+                                <div className="text-xs font-semibold text-right text-emerald-700">
+                                    {summary
+                                        ? `${summary.matched}/${summary.total} matches`
+                                        : ""}
                                 </div>
-                                {isApplicationDataImported && (
-                                    <div className="mt-1 text-xs font-medium text-emerald-700">
-                                        {applicationFieldCount} application
-                                        fields added
-                                    </div>
-                                )}
 
                                 {labelCardIsReady && (
                                     <div className="mt-1 flex items-center justify-end gap-1 text-xs font-medium text-muted-foreground">
@@ -177,7 +172,7 @@ export function UploadedLabelCard({index}: UploadedLabelCardProps) {
                                 <button
                                     type="button"
                                     title="Remove from accepted"
-                                    className="group inline-flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 transition-colors hover:bg-red-100 hover:text-red-600"
+                                    className="group inline-flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 transition-colors hover:bg-red-100 hover:text-red-600 mt-3"
                                     onClick={(event) => {
                                         event.stopPropagation();
                                         handleUnacceptLabelAtIndex(index);

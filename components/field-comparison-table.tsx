@@ -11,6 +11,12 @@ import type {ApplicationData, LabelFieldComparison} from "@/lib/label-types";
 import {useLabelContext} from "@/components/label-context";
 import {AlertTriangle, XCircle} from "lucide-react";
 import {buildRequirementContext} from "@/lib/label-requirements";
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export const FieldComparisonTable = ({
     comparisons,
@@ -47,14 +53,19 @@ export const FieldComparisonTable = ({
     const summary = getLabelMatchSummary(
         labelData,
         applicationData,
+        comparisons,
     );
     const reviewFields = new Set(summary?.reviewFields ?? []);
-    const issueFields = new Set(summary?.issueFields ?? []);
+    const noMatchFields = new Set(summary?.noMatchFields ?? []);
+    const formatStatus = (status: string) =>
+        status === "no_match"
+            ? "No match"
+            : status.charAt(0).toUpperCase() + status.slice(1);
     return (
         <div className="mt-6">
             <div className="mb-2 flex flex-wrap items-center gap-2">
                 <h4 className="text-base font-semibold">
-                    Extracted Label text with application comparison
+                    Extracted Label text with application data comparison
                 </h4>
                 {beverageTypeLabel && originLabel && (
                     <>
@@ -71,25 +82,25 @@ export const FieldComparisonTable = ({
                 <TableHeader>
                     <TableRow>
                         <TableHead className="w-1/4">Field</TableHead>
-                        <TableHead className="w-1/3">Extracted</TableHead>
-                        <TableHead className="w-1/3">Application</TableHead>
+                        <TableHead className="w-1/3">Extracted text</TableHead>
+                        <TableHead className="w-1/3">Application data</TableHead>
                         <TableHead className="w-1/6">Status</TableHead>
                     </TableRow>
                 </TableHeader>
+                <TooltipProvider>
                 <TableBody>
                     {Object.entries(comparisons).map(([key, comparison]) => {
-                        const isIssue = issueFields.has(key);
+                        const isNoMatch = noMatchFields.has(key);
                         const isReview = reviewFields.has(key);
-                        const toneClass = isIssue
+                        const toneClass = isNoMatch
                             ? "text-red-700"
                             : isReview
                               ? "text-amber-700"
                               : "";
-                        const Icon = isIssue ? XCircle : isReview ? AlertTriangle : null;
-                        const iconLabel = isIssue ? "Issue" : isReview ? "Review" : undefined;
+                        const Icon = isNoMatch ? XCircle : isReview ? AlertTriangle : null;
+                        const iconLabel = isNoMatch ? "No match" : isReview ? "Review" : undefined;
                         const applicationValue =
                             applicationData?.[key as keyof ApplicationData] ?? "";
-                        const isApplicationEmpty = applicationValue.trim() === "";
                         const isGovWarning = key === "gov_warning";
                         const requirementLabel = comparison.required ? "Required" : "Optional";
                         const isRejected = rejectedByFile[activeFileIndex];
@@ -135,6 +146,10 @@ export const FieldComparisonTable = ({
                                             ? "✅ Present"
                                             : "❌ Missing"}
                                     </span>
+                                ) : isInputLocked ? (
+                                    <span className="text-sm text-slate-900">
+                                        {applicationValue.trim() || "—"}
+                                    </span>
                                 ) : (
                                     <input
                                         type="text"
@@ -153,21 +168,32 @@ export const FieldComparisonTable = ({
                                 )}
                             </TableCell>
                             <TableCell>
-                                {isGovWarning
-                                    ? comparison.status === "match"
-                                        ? "✅ Match"
-                                        : "❌ Issue"
-                                    : (comparison.required || !isApplicationEmpty) &&
-                                      (comparison.status === "match"
-                                          ? "✅ Match"
-                                          : comparison.status === "review"
-                                            ? "⚠️ Review"
-                                            : "❌ Issue")}
+                                <div className="flex items-center gap-2">
+                                    <span>{formatStatus(comparison.status)}</span>
+                                    {comparison.status !== "match" && (
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                <span className="inline-flex h-5 w-5 items-center justify-center text-slate-600">
+                                                    {comparison.status === "review" ? (
+                                                        <AlertTriangle className="h-4 w-4" />
+                                                    ) : (
+                                                        <XCircle className="h-4 w-4" />
+                                                    )}
+                                                </span>
+                                            </TooltipTrigger>
+                                            <TooltipContent side="top">
+                                                {comparison.rationale ??
+                                                    "Insufficient information to confirm a match."}
+                                            </TooltipContent>
+                                        </Tooltip>
+                                    )}
+                                </div>
                             </TableCell>
                         </TableRow>
                         );
                     })}
                 </TableBody>
+                </TooltipProvider>
             </Table>
         </div>
     );

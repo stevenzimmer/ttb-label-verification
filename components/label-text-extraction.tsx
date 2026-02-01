@@ -26,8 +26,7 @@ export const LabelTextExtraction = () => {
             }`}
         >
             <div className="mb-3 text-base font-semibold">
-                Step 3. Extract text from label text to compare with application
-                data
+                Step 3. Compare label text with application data
             </div>
             <Button
                 onClick={handleExtractTextFromAllLabels}
@@ -39,7 +38,7 @@ export const LabelTextExtraction = () => {
                         : "bg-slate-100"
                 }
             >
-                {isLoading ? "In progress..." : "Extract and compare"}
+                {isLoading ? "In progress..." : "Run comparison"}
             </Button>
             {!hasLabels && (
                 <div className="mt-2 text-xs">
