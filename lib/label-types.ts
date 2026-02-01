@@ -34,12 +34,13 @@ export interface ApplicationData {
     gov_warning: string;
 }
 
-export type ComparisonStatus = "match" | "review" | "issue";
+export type ComparisonStatus = "match" | "review" | "no_match";
 
 export interface LabelFieldComparison {
     labelValue: string | null;
     applicationValue: string;
     status: ComparisonStatus;
+    rationale: string | null;
     required: boolean;
     requirementReason: string;
 }
@@ -49,5 +50,5 @@ export interface LabelMatchSummary {
     total: number;
     allMatched: boolean;
     reviewFields: string[];
-    issueFields: string[];
+    noMatchFields: string[];
 }
