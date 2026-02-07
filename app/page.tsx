@@ -6,7 +6,7 @@ export default function Home() {
         <div className="font-sans dark:bg-black">
             <LabelProvider>
                 <LabelNav />
-                <LabelValidationWrapper />
+                {/* <LabelValidationWrapper /> */}
             </LabelProvider>
         </div>
     );
